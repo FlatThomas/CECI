@@ -9,22 +9,47 @@ FoamFile
 {
     format      ascii;
     class       dictionary;
-    location    "constant";
-    object      phaseChangeProperties;
+    location    "system";
+    object      controlDict;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-phaseChangeModel leeModel;
 
-tSatCoeff (
-	3.64754e2
-	1.29050e-4
-	-5.00408e-11
-	9.52855e-18
-	-6.57279e-25
+application     compressibleInterFoam;
 
-);
+startFrom       startTime;
 
-DDT	[0 2 0 0 0 0 0] 1.00e-4;
+startTime       0;
+
+stopAt          endTime;
+
+endTime         1;
+
+deltaT          0.001;
+
+writeControl    runTime;
+
+writeInterval   0.05;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  6;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable yes;
+
+adjustTimeStep  on;
+
+maxCo           1;
+maxAlphaCo      1;
+
+maxDeltaT       1;
 
 
 // ************************************************************************* //

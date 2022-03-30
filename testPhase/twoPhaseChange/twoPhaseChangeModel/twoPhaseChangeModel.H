@@ -124,8 +124,6 @@ public:
 
     // Member Functions
 
-       
-
         //- Return the internal field of the density of phase 1
         const volScalarField::Internal& rho1() const
         {

@@ -26,132 +26,128 @@ License
 #include "leeModel.H"
 #include "fvScalarMatrix.H"
 #include "addToRunTimeSelectionTable.H"
+#include "fvcDdt.H"
+#include "fvcDiv.H"
+#include "fvcLaplacian.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-namespace twoPhaseChangeModels
-{
-    defineTypeNameAndDebug(leeModel, 0);
-    addToRunTimeSelectionTable(twoPhaseChangeModel, leeModel, dictionary);
-}
+    namespace twoPhaseChangeModels
+    {
+        defineTypeNameAndDebug(leeModel, 0);
+        addToRunTimeSelectionTable(twoPhaseChangeModel, leeModel, dictionary);
+    }
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
-Foam::twoPhaseChangeModels::leeModel::leeModel
-(
-    const compressibleTwoPhaseMixture& mixture
-)
-:
-    twoPhaseChangeModel(typeName, mixture),
-    tSatCoeff_(lookup("pSatCoeff"))
-{}
-
+Foam::twoPhaseChangeModels::leeModel::leeModel(
+    const compressibleTwoPhaseMixture &mixture)
+    : twoPhaseChangeModel(typeName, mixture),
+      tSatCoeff_(lookup("tSatCoeff"))
+{
+}
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-
-Foam::Pair<Foam::tmp<Foam::volScalarField>>
-Foam::twoPhaseChangeModels::leeModel::mDotAlphal() const
+//Calculate Sharp Mass Transfer Values Values
+Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
+Foam::twoPhaseChangeModels::leeModel::mDotAlphal()
 {
-    const volScalarField::Internal &voidFraction = alpha1();
-
-                tmp<volScalarField::Internal> interfacetmp
-                (
-                    new volScalarField::Internal(
-                    IOobject
-                        (
-                        "interface",
-                        voidFraction.time().timeName(),
-                        voidFraction.mesh()
-                        ),
-                    voidFraction.mesh()
-                    )
-                );
-
-                volScalarField::Internal& interface = interfacetmp.ref();
-
-                forAll(voidFraction.mesh().C(), CellI)
-                {
-                    if (voidFraction[CellI] < 1 && voidFraction[CellI] > 0)
-                    {
-                        interface[CellI] = voidFraction[CellI];
-                    }
-                }
-
-        
-            
-    return Pair<tmp<volScalarField>>
-    (
-        interfacetmp,
-        volScalarField::null()
-    );
+    return Pair<tmp<volScalarField::Internal>>(
+        tmp<volScalarField::Internal>(nullptr),
+        tmp<volScalarField::Internal>(nullptr));
 }
 
 
 
-Foam::tmp<Foam::volScalarField::Internal>
-Foam::twoPhaseChangeModels::leeModel::mDotP() 
+    Foam::Pair<Foam::tmp<Foam::volScalarField>>
+    Foam::twoPhaseChangeModels::leeModel::mDotP() const
 {
-     tmp<volScalarField::Internal> test=Foam::twoPhaseChangeModels::leeModel::interfaceCells(); 
-     return test;  
+        return Pair<tmp<volScalarField>>(
+        tmp<volScalarField>(nullptr),
+        tmp<volScalarField>(nullptr));
 }
-
+   
 
 Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
-Foam::twoPhaseChangeModels::leeModel::Salpha
-(
-    volScalarField& alpha
-) const
+Foam::twoPhaseChangeModels::leeModel::Salpha(
+    volScalarField &alpha) const
 {
-    
-    return Pair<tmp<volScalarField::Internal>>
-    (
-        tmp<volScalarField::Internal>(nullptr),
-        tmp<volScalarField::Internal>(nullptr)
-    );
-}
+    const tmp<volScalarField::Internal> &interface = mixture_.fraction();
+    const volScalarField::Internal &satInt = Tsat(p()).ref() * interface.ref();
+    const volScalarField::Internal &alpha1_ = alpha1();
+    const volScalarField::Internal &alpha2_ = alpha2();
 
+    //Reference to Mesh
+    const Foam::fvMesh &mesh = alpha1_.mesh();
+
+    //Initialize Rhodot
+    tmp<volScalarField::Internal>trhodotl(
+        volScalarField::Internal::New(
+            "rhodotl",
+            mesh,
+            dimensionedScalar(dimMass/ dimTime, 0)));
+    
+    volScalarField::Internal &rhodotl = trhodotl.ref();
+
+    forAll(mesh.C(), CellI)
+    {
+        //Ensure Cell is at Interface
+        if (satInt[CellI] != 0)
+        {
+            //Evaporation
+            if (T()[CellI] > satInt[CellI])
+            {
+                rhodotl[CellI] = -1 * alpha1_[CellI] * .1 * rho1()[CellI] * ((T()[CellI] - satInt[CellI]) / satInt[CellI]);
+            }
+            //Condensation
+            else if (T()[CellI] < satInt[CellI])
+            {
+                rhodotl[CellI] = alpha2_[CellI] * .1 * rho2()[CellI] * ((satInt[CellI] - T()[CellI]) / satInt[CellI]);
+            }
+        }
+    }
+
+    //Divide by volume to get in terms of density
+    rhodotl /= mesh.V();
+
+    tmp<volScalarField::Internal> trhodotv(-1 * rhodotl);
+
+    return Pair<tmp<volScalarField::Internal>>(
+        trhodotl,
+        trhodotv);
+}
 
 Foam::tmp<Foam::fvScalarMatrix>
-Foam::twoPhaseChangeModels::leeModel::Sp_rgh
-(
-    const volScalarField& rho,
-    const volScalarField& gh,
-    volScalarField& p_rgh
-) const
+Foam::twoPhaseChangeModels::leeModel::Sp_rgh(
+    const volScalarField &rho,
+    const volScalarField &gh,
+    volScalarField &p_rgh) const
 {
-    return tmp<fvScalarMatrix>(new fvScalarMatrix(p_rgh, dimVolume/dimTime));
+    return tmp<fvScalarMatrix>(new fvScalarMatrix(p_rgh, dimVolume / dimTime));
 }
-
 
 Foam::tmp<Foam::fvVectorMatrix>
-Foam::twoPhaseChangeModels::leeModel::SU
-(
-    const volScalarField& rho,
-    const surfaceScalarField& rhoPhi,
-    volVectorField& U
-) const
+Foam::twoPhaseChangeModels::leeModel::SU(
+    const volScalarField &rho,
+    const surfaceScalarField &rhoPhi,
+    volVectorField &U) const
 {
-    return tmp<fvVectorMatrix>
-    (
-        new fvVectorMatrix(U, dimMass*dimVelocity/dimTime)
-    );
+    return tmp<fvVectorMatrix>(
+        new fvVectorMatrix(U, dimMass * dimVelocity / dimTime));
 }
-
 
 void Foam::twoPhaseChangeModels::leeModel::correct()
 {
     twoPhaseChangeModel::correct();
 }
 
-
 bool Foam::twoPhaseChangeModels::leeModel::read()
 {
     return twoPhaseChangeModel::read();
 }
-
 
 // ************************************************************************* //

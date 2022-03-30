@@ -55,7 +55,7 @@ Description
 #include "fvConstraints.H"
 #include "CorrectPhi.H"
 #include "fvcSmooth.H"
-
+#include "heavySide.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
@@ -72,13 +72,8 @@ int main(int argc, char *argv[])
     #include "CourantNo.H"
     #include "setInitialDeltaT.H"
     #include "createUfIfPresent.H"
-
-    tmp<volScalarField::Internal> testIntFunct=phaseChangePtr -> mdotP();
-
-    testIntFunct.write();
-
-
-
+    #include "interfaceSmearing.H"
+  
 }
 
 

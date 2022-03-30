@@ -1,0 +1,22 @@
+{
+    "files.associations": {
+        "testPhase.C": "cpp",
+        "leeModel.C": "cpp",
+        "OFtutorial1.C": "cpp",
+        "ch9e5.C": "cpp",
+        "twoPhaseChangeModel.C": "cpp",
+        "compressibleInterPhaseTransportModel.C": "cpp",
+        "compressibleTwoPhaseMixture.C": "cpp",
+        "cavitationModel.H": "cpp",
+        "cavitationModel.C": "cpp",
+        "OFtutorial3.C": "cpp",
+        "interfaceProperties.C": "cpp",
+        "twoPhaseChangeModelNew.C": "cpp",
+        "twoPhaseMixture.C": "cpp",
+        "Kunz.H": "cpp",
+        "Kunz.C": "cpp",
+        "CECIFoam.C": "cpp",
+        "internalTest.C": "cpp",
+        "ch7e2.C": "cpp"
+    }
+}

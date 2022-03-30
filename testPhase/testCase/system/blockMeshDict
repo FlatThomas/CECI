@@ -27,7 +27,7 @@ thetaR	#calc "$theta*Foam::constant::mathematical::pi/180.0";
 Iz	#calc "$r*cos($thetaR)";	//z-coord of wedge
 Iyp	#calc "$r*sin($thetaR)";	//positive y coord
 Iyn	#calc "-1.0*$Iyp";		//negitive y-coord
- 
+L	#calc "$Lh+$Lc";			//End of Pipe 
 vertices
 (
 	//Start of tube
@@ -41,16 +41,16 @@ vertices
 	($Lh $Iyn $Iz)	//5
 	
 	//Cooled Section End
-	($Lc 0 0) 	//6
-	($Lc $Iyp $Iz) //7
-	($Lc $Iyn $Iz)	//8
+	($L 0 0) 	//6
+	($L $Iyp $Iz) //7
+	($L $Iyn $Iz)	//8
 
 );
 
 blocks
 (
-	hex (0 1 2 0 3 4 5 3) (150 1 20) simpleGrading (1 1 1)
-	hex (3 4 5 3 6 7 8 6) (150 1 20) simpleGrading (1 1 1)
+	hex (0 1 2 0 3 4 5 3) (150 1 2) simpleGrading (1 1 1)
+	hex (3 4 5 3 6 7 8 6) (200 1 2) simpleGrading (1 1 1)
 );
 
 boundary

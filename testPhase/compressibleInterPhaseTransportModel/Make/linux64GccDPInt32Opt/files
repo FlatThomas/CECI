@@ -1,3 +1,0 @@
-SOURCE += compressibleInterPhaseTransportModel.C
-
-LIB = $(FOAM_LIBBIN)/libcompressibleInterPhaseTransportModel
