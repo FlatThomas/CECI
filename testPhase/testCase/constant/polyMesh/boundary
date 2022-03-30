@@ -1,0 +1,83 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+9
+(
+    frontHeated
+    {
+        type            wedge;
+        inGroups        List<word> 1(wedge);
+        nFaces          3000;
+        startFace       11810;
+    }
+    backHeated
+    {
+        type            wedge;
+        inGroups        List<word> 1(wedge);
+        nFaces          3000;
+        startFace       14810;
+    }
+    frontCooled
+    {
+        type            wedge;
+        inGroups        List<word> 1(wedge);
+        nFaces          3000;
+        startFace       17810;
+    }
+    backCooled
+    {
+        type            wedge;
+        inGroups        List<word> 1(wedge);
+        nFaces          3000;
+        startFace       20810;
+    }
+    heatedWall
+    {
+        type            wall;
+        inGroups        List<word> 1(wall);
+        nFaces          20;
+        startFace       23810;
+    }
+    cooledWall
+    {
+        type            wall;
+        inGroups        List<word> 1(wall);
+        nFaces          20;
+        startFace       23830;
+    }
+    backWall
+    {
+        type            wall;
+        inGroups        List<word> 1(wall);
+        nFaces          150;
+        startFace       23850;
+    }
+    atmosphere
+    {
+        type            patch;
+        nFaces          150;
+        startFace       24000;
+    }
+    axis
+    {
+        type            empty;
+        inGroups        List<word> 1(empty);
+        nFaces          0;
+        startFace       24150;
+    }
+)
+
+// ************************************************************************* //

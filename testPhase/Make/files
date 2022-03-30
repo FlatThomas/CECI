@@ -1,0 +1,4 @@
+VoFSolidificationMeltingSource/VoFSolidificationMeltingSource.C
+testPhase.C
+
+EXE = $(FOAM_APPBIN)/testPhase
