@@ -48,8 +48,8 @@ dimensionedScalar pMin
     mixture
 );
 
-mesh.setFluxRequired(p_rgh.name());
-mesh.setFluxRequired(alpha1.name());
+mesh.schemes().setFluxRequired(p_rgh.name());
+mesh.schemes().setFluxRequired(alpha1.name());
 
 
 #include "readGravitationalAcceleration.H"
@@ -74,6 +74,33 @@ surfaceScalarField rhoPhi
         IOobject::NO_WRITE
     ),
     fvc::interpolate(rho)*phi
+);
+
+//Initialize Fields for Interface Smearing
+volScalarField rhoDotSharp
+(
+    IOobject
+    (
+        "rhoDotSharp",
+        runTime.timeName(),
+        mesh,
+        IOobject::MUST_READ,
+        IOobject::AUTO_WRITE
+    ),
+    mesh
+);
+
+volScalarField rhoSmear
+(
+    IOobject
+    (
+        "rhoSmear",
+        runTime.timeName(),
+        mesh,
+        IOobject::NO_READ,
+        IOobject::NO_WRITE
+    ),
+    rhoDotSharp
 );
 
 volScalarField dgdt(alpha1*fvc::div(phi));

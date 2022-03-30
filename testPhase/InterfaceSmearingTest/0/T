@@ -8,23 +8,28 @@
 FoamFile
 {
     format      ascii;
-    class       dictionary;
-    location    "constant";
-    object      phaseChangeProperties;
+    class       volScalarField;
+    object      T;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-phaseChangeModel leeModel;
 
-tSatCoeff (
-	3.64754e2
-	1.29050e-4
-	-5.00408e-11
-	9.52855e-18
-	-6.57279e-25
+dimensions      [0 0 0 1 0 0 0];
 
-);
+internalField   uniform 300;
 
-DDT	[0 2 0 0 0 0 0] 1.00e-4;
+boundaryField
+{
+    frontHeated
+    {
+        type            zeroGradient;
+    }
 
+    defaultFaces
+    {
+        type            empty;
+    }
+
+
+}
 
 // ************************************************************************* //

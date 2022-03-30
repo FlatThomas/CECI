@@ -1,3 +1,0 @@
-SOURCE += VoFTurbulenceDamping.C
-
-LIB = $(FOAM_LIBBIN)/libcompressibleVoFTurbulenceDamping

@@ -15,7 +15,7 @@ FoamFile
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 phaseChangeModel leeModel;
 
-tSatCoeff (
+tSatCoeff( 
 	3.64754e2
 	1.29050e-4
 	-5.00408e-11

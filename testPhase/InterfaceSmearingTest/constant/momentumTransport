@@ -10,21 +10,21 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "constant";
-    object      phaseChangeProperties;
+    object      momentumTransport;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-phaseChangeModel leeModel;
 
-tSatCoeff (
-	3.64754e2
-	1.29050e-4
-	-5.00408e-11
-	9.52855e-18
-	-6.57279e-25
+simulationType  RAS;
 
-);
+RAS
+{
+    model           kEpsilon;
+    // model           kOmega;
 
-DDT	[0 2 0 0 0 0 0] 1.00e-4;
+    turbulence      on;
+
+    printCoeffs     on;
+}
 
 
 // ************************************************************************* //

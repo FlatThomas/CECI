@@ -10,21 +10,44 @@ FoamFile
     format      ascii;
     class       dictionary;
     location    "constant";
-    object      phaseChangeProperties;
+    object      physicalProperties;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-phaseChangeModel leeModel;
 
-tSatCoeff (
-	3.64754e2
-	1.29050e-4
-	-5.00408e-11
-	9.52855e-18
-	-6.57279e-25
 
-);
+thermoType
+{
+    type            heRhoThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          eConst;
+    equationOfState rPolynomial;
+    specie          specie;
+    energy          sensibleInternalEnergy;
+}
 
-DDT	[0 2 0 0 0 0 0] 1.00e-4;
+mixture
+{
+    specie
+    {
+        molWeight   18.0;
+    }
+    equationOfState
+    {
+        C (0.001278 -2.1055e-06 3.9689e-09 4.3772e-13 -2.0225e-16);
+    }
+    thermodynamics
+    {
+        Cv          4195;
+        Hf          0;
+    }
+    transport
+    {
+        mu          3.645e-4;
+        Pr          2.289;
+    }
+}
+
 
 
 // ************************************************************************* //

@@ -1,4 +1,0 @@
-SOURCE += VoFSurfaceFilm.C
-SOURCE += VoFPatchTransfer/VoFPatchTransfer.C
-
-LIB = $(FOAM_LIBBIN)/libVoFSurfaceFilm

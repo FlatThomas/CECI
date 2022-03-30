@@ -76,37 +76,43 @@ namespace Foam
                 return mixture_.alpha1();
             }
 
-            dimensionedScalar Tsat(scalar P)
+            const volScalarField::Internal &alpha2() const
             {
-                dimensionedScalar Tsat("Tsat", dimTemperature, 0);
-                Foam::label arraySize=tSatCoeff_.size();
-
-                for (int i = 0; i < arraySize; i++)
-                {
-                    Tsat += tSatCoeff_[i] * pow(P, i);
-                }
-
-                return Tsat;
+                return mixture_.alpha2();
             }
 
-            tmp<volScalarField::Internal> interfaceCells()
+            const volScalarField::Internal &T() const
+            {
+                const volScalarField::Internal &T =
+                    mixture_.alpha1().db().lookupObject<volScalarField>("T");
+                return T;
+            }
+
+            const volScalarField::Internal &p() const
+            {
+                const volScalarField::Internal &p =
+                    mixture_.alpha1().db().lookupObject<volScalarField>("p");
+                return p;
+            }
+
+            tmp<volScalarField::Internal> rhoSmear();
+
+            tmp<volScalarField::Internal> interfaceCells() const
             {
                 const volScalarField::Internal &voidFraction = alpha1();
 
-                tmp<volScalarField::Internal> interfacetmp
-                (
+                tmp<volScalarField::Internal> interfacetmp(
                     new volScalarField::Internal(
-                    IOobject
-                        (
-                        "interface",
-                        voidFraction.time().timeName(),
-                        voidFraction.mesh()
-                        ),
-                    voidFraction.mesh()
-                    )
-                );
+                        IOobject(
+                            "interface",
+                            voidFraction.time().timeName(),
+                            voidFraction.mesh(),
+                            IOobject::NO_READ,
+                            IOobject::AUTO_WRITE),
+                        voidFraction.mesh(),
+                        dimensionedScalar("a", dimless, 0)));
 
-                volScalarField::Internal& interface = interfacetmp.ref();
+                volScalarField::Internal &interface = interfacetmp.ref();
 
                 forAll(voidFraction.mesh().C(), CellI)
                 {
@@ -119,16 +125,40 @@ namespace Foam
                 return interfacetmp;
             }
 
-            
+            tmp<volScalarField::Internal>
+            Tsat(const volScalarField::Internal &P) const
+            {
+
+                tmp<volScalarField::Internal> tmpTsat(
+                    new volScalarField::Internal(
+                        IOobject(
+                            "Tsat",
+                            P.time().timeName(),
+                            P.mesh(),
+                            IOobject::NO_READ,
+                            IOobject::AUTO_WRITE),
+
+                        P.mesh(),
+                        dimensionedScalar("Tsat", dimTemperature, 0)));
+
+                volScalarField::Internal &Tsat = tmpTsat.ref();
+
+                for (int i = 0; i < tSatCoeff_.size(); i++)
+                {
+                    Tsat += tSatCoeff_[i] * pow(P, i).field();
+                }
+
+                return tmpTsat;
+            }
 
             //- Return the mass condensation and vaporisation rates as a
             //  coefficient to multiply (1 - alphal) for the condensation rate
             //  and a coefficient to multiply  alphal for the vaporisation rate
-            virtual Pair<tmp<volScalarField>> mDotAlphal() const;
+            virtual Pair<tmp<volScalarField::Internal>> mDotAlphal();
 
             //- Return the mass condensation and vaporisation rates as coefficients
             //  to multiply (p - pSat)
-            virtual tmp<volScalarField::Internal> mDotP();
+            virtual Pair<tmp<volScalarField>> mDotP() const;
 
             //- Return unallocated explicit and implicit sources
             //  for the phase-fraction equation
@@ -163,5 +193,6 @@ namespace Foam
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif
+
 
 // ************************************************************************* //
