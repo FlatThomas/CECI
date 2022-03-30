@@ -1,0 +1,83 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      omega;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 0 -1 0 0 0 0];
+
+internalField   uniform 0.1;
+
+boundaryField
+{
+    frontHeated
+    {
+    	type wedge;
+    
+    }
+     backHeated
+    {
+    	type wedge;
+    
+    }
+     frontCooled
+    {
+    	type wedge;
+    
+    }
+     backCooled
+    {
+    	type wedge;
+    
+    }
+    
+    heatedWall
+    {
+    	type            omegaWallFunction;
+        value           uniform 0.1;
+    
+    }
+    
+    cooledWall
+    {
+    	type            omegaWallFunction;
+        value           uniform 0.1;
+    }
+    
+    backWall
+    {
+    	type            omegaWallFunction;
+        value           uniform 0.1;
+    }
+
+    atmosphere
+    {
+        type            inletOutlet;
+        inletValue      uniform 0.1;
+        value           uniform 0.1;
+    }
+    
+    axis
+    {
+	type empty;
+    }
+
+    defaultFaces
+    {
+        type            empty;
+    }
+
+}
+
+
+// ************************************************************************* //

@@ -1,0 +1,10 @@
+SOURCE += twoPhaseChangeModel/twoPhaseChangeModel.C
+SOURCE += twoPhaseChangeModel/twoPhaseChangeModelNew.C
+SOURCE += noPhaseChange/noPhaseChange.C
+SOURCE += cavitation/cavitationModel/cavitationModel.C
+SOURCE += cavitation/Kunz/Kunz.C
+SOURCE += cavitation/Merkle/Merkle.C
+SOURCE += cavitation/SchnerrSauer/SchnerrSauer.C
+SOURCE += leeModel/leeModel.C
+
+LIB = $(FOAM_LIBBIN)/libcompressibleTwoPhaseChangeModels
