@@ -31,7 +31,6 @@ License
 #include "fvcLaplacian.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
-
 namespace Foam
 {
     namespace twoPhaseChangeModels
@@ -45,11 +44,15 @@ namespace Foam
 
 Foam::twoPhaseChangeModels::leeModel::leeModel(
     const compressibleTwoPhaseMixture &mixture)
-    : twoPhaseChangeModel(typeName, mixture),
-      tSatCoeff_(lookup("tSatCoeff"))
+    : twoPhaseChangeModel(typeName, mixture)
 {
-}
+    twoPhaseChangeModelCoeffs_.lookup("T0")>>T0;
+    twoPhaseChangeModelCoeffs_.lookup("T1")>>T1;
+    twoPhaseChangeModelCoeffs_.lookup("T2")>>T2;
+    twoPhaseChangeModelCoeffs_.lookup("T3")>>T3;
 
+
+}
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 //Calculate Sharp Mass Transfer Values Values
@@ -76,15 +79,11 @@ Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
 Foam::twoPhaseChangeModels::leeModel::Salpha(
     volScalarField &alpha) const
 {
-    const tmp<volScalarField::Internal> &interface = mixture_.fraction();
-    const volScalarField::Internal &satInt = Tsat(p()).ref() * interface.ref();
+    //Reference to Mesh
     const volScalarField::Internal &alpha1_ = alpha1();
     const volScalarField::Internal &alpha2_ = alpha2();
-
-    //Reference to Mesh
     const Foam::fvMesh &mesh = alpha1_.mesh();
-
-    //Initialize Rhodot
+        //Initialize Rhodot
     tmp<volScalarField::Internal>trhodotl(
         volScalarField::Internal::New(
             "rhodotl",
@@ -93,28 +92,46 @@ Foam::twoPhaseChangeModels::leeModel::Salpha(
     
     volScalarField::Internal &rhodotl = trhodotl.ref();
 
-    forAll(mesh.C(), CellI)
+   //Set Interface Field 
+   volScalarField::Internal interface(alpha1_); 
+   forAll(interface, CellI)
+                {
+                    if (alpha1_[CellI] < .999 && alpha1_[CellI] > 1e-5)
+                    {
+                        interface[CellI] = alpha1_[CellI];
+                    }
+                    else
+                    {
+                        interface[CellI]=0;
+                    }
+                }
+
+   const volScalarField::Internal &satTemp=Tsat(p()).ref();
+   
+   forAll(mesh.C(), CellI)
     {
         //Ensure Cell is at Interface
-        if (satInt[CellI] != 0)
+        if (interface[CellI] > 1e-4)
         {
             //Evaporation
-            if (T()[CellI] > satInt[CellI])
+            if (T()[CellI] > satTemp[CellI])
             {
-                rhodotl[CellI] = -1 * alpha1_[CellI] * .1 * rho1()[CellI] * ((T()[CellI] - satInt[CellI]) / satInt[CellI]);
+                rhodotl[CellI] = alpha1_[CellI] * .1 * rho1()[CellI]
+                                 * ((T()[CellI] - satTemp[CellI]) / satTemp[CellI]);
             }
             //Condensation
-            else if (T()[CellI] < satInt[CellI])
+            else if (T()[CellI] < satTemp[CellI])
             {
-                rhodotl[CellI] = alpha2_[CellI] * .1 * rho2()[CellI] * ((satInt[CellI] - T()[CellI]) / satInt[CellI]);
+                rhodotl[CellI] = -1*alpha2_[CellI] * .1 * rho2()[CellI]
+                    * ((satTemp[CellI] - T()[CellI]) / satTemp[CellI]);
             }
         }
     }
 
+
     //Divide by volume to get in terms of density
     rhodotl /= mesh.V();
-
-    tmp<volScalarField::Internal> trhodotv(-1 * rhodotl);
+        tmp<volScalarField::Internal> trhodotv(-1 * rhodotl);
 
     return Pair<tmp<volScalarField::Internal>>(
         trhodotl,

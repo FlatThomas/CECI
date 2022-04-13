@@ -46,12 +46,12 @@ solvers
         relTol          0.05;
     }
 
-    smearEqn
+    rhoSmear
     {
         solver          PCG;
         preconditioner  DIC;
-        tolerance       1e-07;
-        relTol          0.05;
+        tolerance       1e-08;
+        relTol          1e-03;
     }
 
 

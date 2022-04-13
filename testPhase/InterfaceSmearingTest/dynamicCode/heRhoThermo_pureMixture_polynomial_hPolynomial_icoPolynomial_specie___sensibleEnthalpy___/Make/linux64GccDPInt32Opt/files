@@ -1,0 +1,6 @@
+# dynamicCode:
+# SHA1 = c92121a83e9f397179ef59322f976a6a75104c3e
+
+SOURCE += rhoThermoTemplate.C
+
+LIB = $(PWD)/../platforms/$(WM_OPTIONS)/lib/libheRhoThermo_pureMixture_polynomial_hPolynomial_icoPolynomial_specie___sensibleEnthalpy____c92121a83e9f397179ef59322f976a6a75104c3e

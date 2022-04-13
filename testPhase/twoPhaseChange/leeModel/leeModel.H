@@ -52,7 +52,10 @@ namespace Foam
             : public twoPhaseChangeModel
         {
 
-            List<scalar> tSatCoeff_;
+           dimensionedScalar T0;
+           dimensionedScalar T1;
+           dimensionedScalar T2;
+           dimensionedScalar T3;
 
         public:
             //- Runtime type information
@@ -95,13 +98,12 @@ namespace Foam
                 return p;
             }
 
-            tmp<volScalarField::Internal> rhoSmear();
 
-            tmp<volScalarField::Internal> interfaceCells() const
+            /*tmp<volScalarField::Internal> interfaceCells() const
             {
                 const volScalarField::Internal &voidFraction = alpha1();
 
-                tmp<volScalarField::Internal> interfacetmp(
+                tmp<volScalarField::Internal> tinterface(
                     new volScalarField::Internal(
                         IOobject(
                             "interface",
@@ -110,21 +112,17 @@ namespace Foam
                             IOobject::NO_READ,
                             IOobject::AUTO_WRITE),
                         voidFraction.mesh(),
-                        dimensionedScalar("a", dimless, 0)));
+                        dimensionedScalar(dimless, 0)));
 
-                volScalarField::Internal &interface = interfacetmp.ref();
 
-                forAll(voidFraction.mesh().C(), CellI)
-                {
-                    if (voidFraction[CellI] < 1 && voidFraction[CellI] > 0)
-                    {
-                        interface[CellI] = voidFraction[CellI];
-                    }
-                }
+                volScalarField::Internal &interface = tinterface.ref();
+                
 
-                return interfacetmp;
+
+                
+                    return tinterface;
             }
-
+*/
             tmp<volScalarField::Internal>
             Tsat(const volScalarField::Internal &P) const
             {
@@ -139,14 +137,11 @@ namespace Foam
                             IOobject::AUTO_WRITE),
 
                         P.mesh(),
-                        dimensionedScalar("Tsat", dimTemperature, 0)));
+                        dimensionedScalar("Tsat", dimensionSet(0,0,0, 1,0,0,0), 0)));
 
                 volScalarField::Internal &Tsat = tmpTsat.ref();
 
-                for (int i = 0; i < tSatCoeff_.size(); i++)
-                {
-                    Tsat += tSatCoeff_[i] * pow(P, i).field();
-                }
+                    Tsat=T0+T1*P+T2*pow(P,2)+T3*pow(P,3);
 
                 return tmpTsat;
             }

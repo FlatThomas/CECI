@@ -56,6 +56,7 @@ Description
 #include "CorrectPhi.H"
 #include "fvcSmooth.H"
 #include "heavySide.H"
+#include "interfaceReconstruct.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 int main(int argc, char *argv[])
@@ -72,8 +73,16 @@ int main(int argc, char *argv[])
     #include "CourantNo.H"
     #include "setInitialDeltaT.H"
     #include "createUfIfPresent.H"
-    #include "interfaceSmearing.H"
-  
+
+    Reconstruction.correct();
+    volVectorField::Internal &test=Reconstruction.Sp().ref();
+
+    forAll(mesh.C(),cellI)
+    {
+        Info<<"Reconstruction Value"<<mag(test[cellI])<<endl;
+    }
+
+
 }
 
 

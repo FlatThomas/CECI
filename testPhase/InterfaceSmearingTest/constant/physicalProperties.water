@@ -19,33 +19,34 @@ thermoType
 {
     type            heRhoThermo;
     mixture         pureMixture;
-    transport       const;
-    thermo          eConst;
-    equationOfState rPolynomial;
+    transport       polynomial;
+    thermo          hPolynomial;
+    equationOfState icoPolynomial;
     specie          specie;
-    energy          sensibleInternalEnergy;
+    energy          sensibleEnthalpy;
 }
 
 mixture
 {
-    specie
-    {
-        molWeight   18.0;
-    }
-    equationOfState
-    {
-        C (0.001278 -2.1055e-06 3.9689e-09 4.3772e-13 -2.0225e-16);
-    }
-    thermodynamics
-    {
-        Cv          4195;
-        Hf          0;
-    }
-    transport
-    {
-        mu          3.645e-4;
-        Pr          2.289;
-    }
+    specie                                                                     
+    {                                                                          
+        molWeight       18.0;                                                  
+    }                                                                          
+    thermodynamics                                                             
+    {                                                                          
+        CpCoeffs<8>     (9850.69 -48.6714 0.13736 -0.000127063  0 0 0 0);      
+        Sf              0;                                                     
+        Hf              0;                                                     
+    }                                                                          
+    equationOfState                                                            
+    {                                                                          
+        rhoCoeffs<8>    (746.025 1.93017 -0.00365471 0 0 0 0 0);               
+    }                                                                          
+    transport                                                                  
+    {                                                                          
+        muCoeffs<8>     (0.116947 -0.00100532 2.90283e-6 -2.80572e-9 0 0 0 0); 
+        kappaCoeffs<8>  (-0.710696 0.0071857 -9.29827e-6 0 0 0 0 0);           
+    }                                                                          
 }
 
 

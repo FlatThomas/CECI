@@ -6,5 +6,6 @@ cavitation/Kunz/Kunz.C
 cavitation/Merkle/Merkle.C
 cavitation/SchnerrSauer/SchnerrSauer.C
 leeModel/leeModel.C
-
+tempGrad/tempGrad.C
+interfaceReconstruct/interfaceReconstruct.C
 LIB = $(FOAM_LIBBIN)/libcompressibleTwoPhaseChangeModels

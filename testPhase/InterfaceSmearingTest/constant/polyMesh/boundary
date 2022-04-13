@@ -8,15 +8,28 @@
 FoamFile
 {
     format      ascii;
-    class       volScalarField::Internal;
-    location    "0";
-    object      interface;
+    class       polyBoundaryMesh;
+    location    "constant/polyMesh";
+    object      boundary;
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-dimensions      [0 0 0 0 0 0 0];
-
-value           uniform 0;
-
+2
+(
+    frontHeated
+    {
+        type            wall;
+        inGroups        List<word> 1(wall);
+        nFaces          200;
+        startFace       4900;
+    }
+    defaultFaces
+    {
+        type            empty;
+        inGroups        List<word> 1(empty);
+        nFaces          5000;
+        startFace       5100;
+    }
+)
 
 // ************************************************************************* //

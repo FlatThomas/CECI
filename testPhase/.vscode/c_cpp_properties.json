@@ -3,7 +3,8 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/home/david/OpenFOAM/OpenFOAM-dev/src/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang-12",

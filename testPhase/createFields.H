@@ -40,6 +40,8 @@ autoPtr<twoPhaseChangeModel> phaseChangePtr
 
 volScalarField& alpha1(mixture.alpha1());
 const volScalarField& rho = mixture.rho();
+Info<< "Constructing Interface Reconstruction Class\n" <<endl;
+interfaceReconstruct Reconstruction(mixture);
 
 dimensionedScalar pMin
 (
