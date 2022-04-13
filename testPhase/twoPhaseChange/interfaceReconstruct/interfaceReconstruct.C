@@ -51,24 +51,32 @@ void Foam::interfaceReconstruct::constructEdgeIndexing()
         if(interface[own[faceI]]==1 && interface[nei[faceI]]==1)
         {
             faceMap_.insert(faceI,0);
+            Info<<"Face "<<faceI<<" added to set"<<endl;
         }
     }
 
 }
 
-// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
-
-Foam::interfaceReconstruct::interfaceReconstruct(
-    const compressibleTwoPhaseMixture &mixture):
-    mixture_(mixture), 
-    mesh_(alpha1().mesh()),
-    pMesh_(mesh_),
-    vpi_(mesh_),
-    alpha1P_(vpi_.interpolate(mixture_.alpha1()))
-        
+void Foam::interfaceReconstruct::findBoundaryEdges()
 {
-    //calculateAlphaP();
-    constructEdgeIndexing();
+    forAll(mesh_.boundaryMesh(),patchI)
+{
+    //Get Boundary Faces on patch
+    const faceList & boundaryFaces=mesh_.boundaryMesh()[patchI];
+    forAll(boundaryFaces,FaceI)
+    {
+        const edgeList &E=boundaryFaces[FaceI].edges();
+
+        forAll(E,EdgeI)
+        {
+            if(boundaryEdges_.found(E[EdgeI])==false)
+            {
+                boundaryEdges_.set(E[EdgeI],1);
+            }
+        }
+    }
+}
+ 
 }
 
 void Foam::interfaceReconstruct::DFS(label i)
@@ -86,21 +94,31 @@ void Foam::interfaceReconstruct::DFS(label i)
         {
             //Add to list
             const edge &E1=fEdges[edgeI];
-            edgeMapb_.insert(E1,1);
-            
+            edgeMapb_.set(E1,1);
+
+            //Determine if edge is connected to boundary
+            bool isBoundaryEdge=false;
+            if(boundaryEdges_.found(fEdges[edgeI])==true)
+            {
+                isBoundaryEdge=true;
+            }
+
             //Circulator Instantation
-            edgeFaceCirculator circ(mesh_,i,true,edgeI,false);
+            edgeFaceCirculator circ(mesh_,i,true,edgeI,isBoundaryEdge);
             labelList eFaces;
 
             //Generate FaceList
+            Info<<"generate edge connectivity "<<endl;
             for (edgeFaceCirculator iter=circ.begin(); iter != circ.end(); ++iter) 
             {
+                Info<<iter.faceLabel()<<endl;
                 //Only add if in set
                 if(faceMap_.found(iter.faceLabel())==true)
                 {
                     eFaces.append(iter.faceLabel());
                 }
             }
+        
             
             if((sign(alpha1P_[E1[0]]-.5)+sign(alpha1P_[E1[1]]-.5))==0)    //Check if Face has .5 somewherebetween verts
             {
@@ -131,6 +149,7 @@ void Foam::interfaceReconstruct::DFS(label i)
                     else
                     {
                         Vs.first()=linInterp;
+                        Vs.second()=vector::zero;
                         intFaceMap_.set(eFaces[faceJ],Vs);
                     }
                 }
@@ -141,7 +160,7 @@ void Foam::interfaceReconstruct::DFS(label i)
             {
                 if(faceMap_[eFaces[faceI]]==0)    
                     {
-                        DFS(faceI);
+                        DFS(eFaces[faceI]);
                     }
             }
         }
@@ -149,6 +168,27 @@ void Foam::interfaceReconstruct::DFS(label i)
 
    
 }
+
+
+// * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
+
+Foam::interfaceReconstruct::interfaceReconstruct(
+    const compressibleTwoPhaseMixture &mixture):
+    mixture_(mixture), 
+    mesh_(alpha1().mesh()),
+    pMesh_(mesh_),
+    vpi_(mesh_),
+    alpha1P_(vpi_.interpolate(mixture_.alpha1()))
+        
+{
+    //calculateAlphaP();
+    constructEdgeIndexing();
+    findBoundaryEdges();
+}
+
+// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
+
+// ************************************************************************* //
 
 tmp<volVectorField::Internal> Foam::interfaceReconstruct::Sp() const
 {
@@ -211,6 +251,3 @@ void Foam::interfaceReconstruct::correct()
 {
     DFS(faceMap_.begin().key());
 }
-// * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
-
-// ************************************************************************* //

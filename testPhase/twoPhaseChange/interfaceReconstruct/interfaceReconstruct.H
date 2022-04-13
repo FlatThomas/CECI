@@ -50,6 +50,7 @@ SourceFiles
             volPointInterpolation vpi_;
 
             Map<bool> faceMap_;
+            EdgeMap<bool> boundaryEdges_;
             EdgeMap<vector> edgeMap_;
             EdgeMap<bool> edgeMapb_;
             pointScalarField alpha1P_;
@@ -59,6 +60,7 @@ SourceFiles
            void calculateAlphaP();
            void constructEdgeIndexing();
            void DFS(label i);
+           void findBoundaryEdges();
 
         public:
        TypeName("interfaceReconstruct");
