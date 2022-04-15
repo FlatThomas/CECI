@@ -17,6 +17,8 @@
         "Kunz.C": "cpp",
         "CECIFoam.C": "cpp",
         "internalTest.C": "cpp",
-        "ch7e2.C": "cpp"
+        "ch7e2.C": "cpp",
+        "interfaceReconstruct.C": "cpp",
+        "interfaceReconstruct.H": "cpp"
     }
 }

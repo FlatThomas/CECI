@@ -49,31 +49,34 @@ SourceFiles
             pointMesh pMesh_;
             volPointInterpolation vpi_;
 
+            EdgeMap<label> edgeIndex_;
             Map<bool> faceMap_;
             EdgeMap<bool> boundaryEdges_;
             EdgeMap<vector> edgeMap_;
             EdgeMap<bool> edgeMapb_;
             pointScalarField alpha1P_;
-            Map<Pair<vector>> intFaceMap_;
+            labelListList edgeFaces_;
 
            //Private Member Functions
            void calculateAlphaP();
-           void constructEdgeIndexing();
+           void createEdgeIndexing();
+           void createFaceList();
            void DFS(label i);
            void findBoundaryEdges();
+           void generateEdgeFaceList();
 
         public:
        TypeName("interfaceReconstruct");
 
         //Construct from Mixture
         interfaceReconstruct(
-            const compressibleTwoPhaseMixture &mixture);
+        const compressibleTwoPhaseMixture &mixture);
 
-            interfaceReconstruct(const interfaceProperties&) = delete;
+        interfaceReconstruct(const interfaceProperties&) = delete;
 
-       //- Destructor
-       virtual ~interfaceReconstruct()
-       {} 
+        //- Destructor
+        virtual ~interfaceReconstruct()
+        {} 
 
         const volScalarField::Internal &alpha1() const
             {

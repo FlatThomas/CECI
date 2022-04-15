@@ -79,17 +79,15 @@ int main(int argc, char *argv[])
 
     forAll(mesh.C(),cellI)
     {
-        if(alpha1[cellI]>0 & alpha1[cellI]<1)
+        if(alpha1[cellI]>0 && alpha1[cellI]<1)
         {
-            Info<<"Reconstruction Value"<<mag(test[cellI])<<endl;
-            Info<<"Interface Value at cell"<<alpha1[cellI]<<endl;
-            Info<<"Near Interface Value at cell "<<mixture.nearInterface().ref()[cellI]<<endl;
+            //Info<<"Interface Value at cell"<<alpha1[cellI]<<endl;
+            //Info<<"Near Interface Value at cell "<<mixture.nearInterface().ref()[cellI]<<endl;
+            //Info<<"Interface Area"<<test[cellI]<<endl;
         }
     }
-    
 
-
+return 0;
 }
-
 
 // ************************************************************************* //
