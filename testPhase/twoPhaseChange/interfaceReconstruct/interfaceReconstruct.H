@@ -89,7 +89,7 @@ SourceFiles
             }
 
         //Calculate Interface Area Vector
-        tmp<volVectorField::Internal> Sp() const;
+        tmp<volVectorField> Sp() const;
 
         //Calculate Interface Offset
         tmp<volScalarField::Internal> lambda() const;

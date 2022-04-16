@@ -41,7 +41,7 @@ void Foam::interfaceReconstruct::createEdgeIndexing()
 {
     Info<<"creating edge indexing "<<endl;
     const edgeList &Edges=mesh_.edges();
-    edgeIndex_.resize(Edges.size());
+    //edgeIndex_.resize(Edges.size());
 
     forAll(Edges,i)
     {
@@ -65,7 +65,7 @@ void Foam::interfaceReconstruct::createFaceList()
         if(interface[own[faceI]]==1 && interface[nei[faceI]]==1)
         {
             faceMap_.insert(faceI, 0);
-          //  Info<<"Face "<<faceI<<" added to set"<<endl;
+            Info<<"Face "<<faceI<<" added to set"<<mesh_.Cf()[faceI]<<endl;
 
         }
     }
@@ -80,7 +80,7 @@ void Foam::interfaceReconstruct::createFaceList()
            if(interface[pFaceCells[faceI]]==1)
            {
                faceMap_.insert(patch.start()+faceI,0);
-           //    Info<<"Face "<<patch.start()+faceI<<" from boundary added to set"<<endl;
+               Info<<"Face "<<patch.start()+faceI<<" from boundary added to set"<<mesh_.Cf()[patch.start()+faceI]<<endl;
            } 
         }
         
@@ -88,8 +88,8 @@ void Foam::interfaceReconstruct::createFaceList()
     
     faceMap_.shrink();
     //PreAllocate Space on EdgeMaps
-    edgeMapb_.resize(4*faceMap_.size());
-    edgeMap_.resize(2*faceMap_.size());
+    //edgeMapb_.resize(4*faceMap_.size());
+    //edgeMap_.resize(2*faceMap_.size());
 }
 
 void Foam::interfaceReconstruct::findBoundaryEdges()
@@ -233,74 +233,78 @@ Foam::interfaceReconstruct::interfaceReconstruct(
 
 // ************************************************************************* //
 
-tmp<volVectorField::Internal> Foam::interfaceReconstruct::Sp() const
+tmp<volVectorField> Foam::interfaceReconstruct::Sp() const
 {
     //Info<<"constructing Sp vol vector field"<<endl;
     //Standard Tmp Initialization
-    tmp<volVectorField::Internal>tSp(
-        volVectorField::Internal::New(
+    tmp<volVectorField>tSp(
+        volVectorField::New(
             "SpInt",
             mesh_,
             dimensionedVector(dimensionSet(0,2,0,0,0,0,0),vector::zero)));
-    volVectorField::Internal &Sp=tSp.ref(); 
+    volVectorField &Sp=tSp.ref(); 
 
     const labelUList &own=mesh_.owner();
     const labelUList &nei=mesh_.neighbour();
     const volVectorField &alphaNormal=mixture_.n().ref();
-    const edgeList &Edges=mesh_.edges();
     const faceList &Faces=mesh_.faces();
  
     //Loop through all Elements in faceMap
     forAllConstIter(Map<bool>,faceMap_, iter)
     {
-       label faceLabel=iter.key();
-       const face &F=Faces[faceLabel];
+       label F=iter.key();
 
        List<vector> V;
 
-       forAll(F.edges(),edgeI)
+       forAll(Faces[F].edges(),edgeI)
        {
-           if(edgeMap_.found(F.edges()[edgeI])==true)
+
+           if(edgeMap_.found(Faces[F].edges()[edgeI])==true)
            {
-              V.append(edgeMap_[F.edges()[edgeI]]); 
+                V.append(edgeMap_[Faces[F].edges()[edgeI]]); 
            }
        }
 
-       vector xproduct=V[0]^V[1];
+       vector xproduct=0.5*(V[0]^V[1]);
+       /*Info<<"Face "<<F<<" Vertice 1 "<<V[0][0]<<" "<<V[0][1]<<" "<<V[0][2]<<endl;
+       Info<<"Face "<<F<<" Vertice 2 "<<V[1][0]<<" "<<V[1][1]<<" "<<V[1][2]<<endl;
+       Info<<"Face "<<F<<" X-product "<<xproduct[0]<<" "<<xproduct[1]<<" "<<xproduct[2]<<endl;
+      */ 
 
-       if(faceLabel<own.size())
+       if(F<own.size())
        {
             //Flip if Wrong Direction
-            if((xproduct & alphaNormal[own[faceLabel]])<0)
+            if((xproduct & alphaNormal[own[F]])<0)
             {
-                xproduct*=-1;
+                xproduct=.5*(V[1]^V[0]);
             }
 
-            Sp[own[faceLabel]]+=xproduct;
-            Sp[nei[faceLabel]]-=xproduct;
-
+            Sp[own[F]]+=xproduct;
+            Sp[nei[F]]-=xproduct;
+                    
         }
+
        else
        {
            forAll(mesh_.boundaryMesh(),patchI)
            {
-               if((mesh_.boundaryMesh()[patchI].start()<= faceLabel) &&
-               (faceLabel < mesh_.boundaryMesh()[patchI].start()+mesh_.boundaryMesh()[patchI].size()))
+               if((mesh_.boundaryMesh()[patchI].start()<= F) &&
+               (F < mesh_.boundaryMesh()[patchI].start()+mesh_.boundaryMesh()[patchI].size()))
                {
                     const labelUList &pFaceCells=mesh_.boundaryMesh()[patchI].faceCells();
+                    //Info<<"Face "<<F<<" in patch "<<patchI<<endl;
 
-                    if((xproduct & alphaNormal[pFaceCells[faceLabel]])<0)
+                    if((xproduct & alphaNormal[pFaceCells[F-mesh_.boundaryMesh()[patchI].start()]])<0)
                     {
-                        xproduct*=-1;
+                        xproduct=.5*(V[1]^V[0]);
                     }
 
-                    Sp[pFaceCells[faceLabel]]+=xproduct;
+                    Sp[pFaceCells[F-mesh_.boundaryMesh()[patchI].start()]]+=xproduct;
                }
            }
        }
     }
 
-    Sp*=.5;
     return tSp;   
 }
 
@@ -313,7 +317,7 @@ tmp<volScalarField::Internal> Foam::interfaceReconstruct::lambda() const
                 mesh_,
                 dimensionedScalar(dimensionSet(0,2,0,0,0,0,0),0)));
 
-    volScalarField::Internal &lambda=tLambda.ref(); 
+    //volScalarField::Internal &lambda=tLambda.ref(); 
 
 
     return tLambda;   

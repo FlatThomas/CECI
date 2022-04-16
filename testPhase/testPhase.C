@@ -81,11 +81,23 @@ int main(int argc, char *argv[])
     {
         if(alpha1[cellI]>0 && alpha1[cellI]<1)
         {
-            //Info<<"Interface Value at cell"<<alpha1[cellI]<<endl;
-            //Info<<"Near Interface Value at cell "<<mixture.nearInterface().ref()[cellI]<<endl;
-            //Info<<"Interface Area"<<test[cellI]<<endl;
+           // Info<<"CELL "<<cellI<<" Interface Area "<<mag(test[cellI])<<endl;
         }
     }
+const labelUList &own=mesh.owner();
+const labelUList &nei=mesh.neighbour();
+
+forAll(own,faceI)
+{
+    if(own[faceI]==12)
+    {
+        Info<<"OWNER "<<faceI<<endl;
+    }
+    else if(nei[faceI]==12)
+    {
+        Info<<"NEIGHBOUR "<<faceI<<endl;
+    }
+}
 
 return 0;
 }
