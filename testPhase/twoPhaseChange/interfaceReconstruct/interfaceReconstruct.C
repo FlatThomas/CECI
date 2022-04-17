@@ -232,10 +232,78 @@ Foam::interfaceReconstruct::interfaceReconstruct(
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 // ************************************************************************* //
+template <class Type>
+void Foam::interfaceReconstruct::pass(DimensionedField<Type, fvMesh> &intField, label n) const
+{
+    const labelListList &cellCells=mesh_.cellCells();
+
+
+    labelList intCells;
+    labelList queueCells;
+    labelList counter(mesh_.C().size(),0);
+    labelList visited(mesh_.C().size(),0);
+
+
+    //Prelim Search
+    forAll(mesh_.C(),cellI)
+    {
+        if(intField[cellI]!=Zero) //Maybe a better way to do this
+        {
+            intCells.append(cellI);
+            visited[cellI]=1;
+        }
+    }
+
+    //Repeat this cycle n times
+    for(int i=0; i<n;i++)
+    {
+    
+        //Loop over interface cells
+        forAll(intCells,cellI)
+        {
+            labelList adjCells=cellCells[intField[intCells[cellI]]]; //ID cells adjacent to current cell
+            //Start Loop over adjacent Cells
+            forAll(adjCells,cellJ)
+            {
+                //Look for cells not already visited
+                if(visited[adjCells[cellJ]]==0)
+                {
+                    counter[adjCells[cellJ]]++; //Counter for average
+
+                    //Add to index if first time being visited
+                    if(counter[adjCells[cellJ]]==1)
+                    {
+                        queueCells.append(adjCells[cellJ]);
+                    }
+
+                    intField[adjCells[cellJ]]+=intField[intCells[cellI]]; //add interface value to adjacent cell
+                }
+            }
+
+        }
+
+        //Clear and Resize Interface Cell for next major loop
+        intCells.clear();
+        intCells.resize(queueCells.size());
+
+        //Loop through Queued cells and calculate Average
+        forAll(queueCells,cellI)
+        {
+            intField[queueCells[cellI]]/=counter[queueCells[cellI]];
+
+            //Mark queued cells as visited
+            visited[queueCells[cellI]]=1;
+            
+            //Move Queued Cells to Interface
+            intCells[cellI]=queueCells[cellI];
+        }
+        
+        queueCells.clear();
+    }
+}
 
 tmp<volVectorField> Foam::interfaceReconstruct::Sp() const
 {
-    //Info<<"constructing Sp vol vector field"<<endl;
     //Standard Tmp Initialization
     tmp<volVectorField>tSp(
         volVectorField::New(
@@ -258,7 +326,6 @@ tmp<volVectorField> Foam::interfaceReconstruct::Sp() const
 
        forAll(Faces[F].edges(),edgeI)
        {
-
            if(edgeMap_.found(Faces[F].edges()[edgeI])==true)
            {
                 V.append(edgeMap_[Faces[F].edges()[edgeI]]); 
@@ -266,22 +333,17 @@ tmp<volVectorField> Foam::interfaceReconstruct::Sp() const
        }
 
        vector xproduct=0.5*(V[0]^V[1]);
-       /*Info<<"Face "<<F<<" Vertice 1 "<<V[0][0]<<" "<<V[0][1]<<" "<<V[0][2]<<endl;
-       Info<<"Face "<<F<<" Vertice 2 "<<V[1][0]<<" "<<V[1][1]<<" "<<V[1][2]<<endl;
-       Info<<"Face "<<F<<" X-product "<<xproduct[0]<<" "<<xproduct[1]<<" "<<xproduct[2]<<endl;
-      */ 
 
        if(F<own.size())
        {
             //Flip if Wrong Direction
-            if((xproduct & alphaNormal[own[F]])<0)
+            if((xproduct & alphaNormal[own[F]])<=0)
             {
                 xproduct=.5*(V[1]^V[0]);
             }
 
             Sp[own[F]]+=xproduct;
             Sp[nei[F]]-=xproduct;
-                    
         }
 
        else
@@ -294,11 +356,10 @@ tmp<volVectorField> Foam::interfaceReconstruct::Sp() const
                     const labelUList &pFaceCells=mesh_.boundaryMesh()[patchI].faceCells();
                     //Info<<"Face "<<F<<" in patch "<<patchI<<endl;
 
-                    if((xproduct & alphaNormal[pFaceCells[F-mesh_.boundaryMesh()[patchI].start()]])<0)
+                    if((xproduct & alphaNormal[pFaceCells[F-mesh_.boundaryMesh()[patchI].start()]])<=0)
                     {
                         xproduct=.5*(V[1]^V[0]);
                     }
-
                     Sp[pFaceCells[F-mesh_.boundaryMesh()[patchI].start()]]+=xproduct;
                }
            }
@@ -315,9 +376,64 @@ tmp<volScalarField::Internal> Foam::interfaceReconstruct::lambda() const
             volScalarField::Internal::New(
                 "lambdaInt",
                 mesh_,
-                dimensionedScalar(dimensionSet(0,2,0,0,0,0,0),0)));
+                dimensionedScalar(dimensionSet(0,1,0,0,0,0,0),0)));
 
-    //volScalarField::Internal &lambda=tLambda.ref(); 
+    volScalarField::Internal &lambda=tLambda.ref();
+    labelList counter(mesh_.nCells());
+
+
+    const labelUList &own=mesh_.owner();
+    const labelUList &nei=mesh_.neighbour();
+    const volVectorField &alphGrad=mixture_.n().ref();
+
+    for(HashTable<vector,edge,Hash<edge>>::const_iterator iter=edgeMap_.cbegin(); iter!=edgeMap_.end(); iter++)
+    {
+        edge eI=iter.key();
+        label edgeLabel=edgeIndex_[eI];
+        const labelList &eFaces=edgeFaces_[edgeLabel];
+
+        forAll(eFaces,faceI)
+        {
+            label F=eFaces[faceI];
+
+            if(eFaces[faceI]<own.size())
+            {
+                lambda[own[F]]+=alphGrad[own[F]] & edgeMap_[iter.key()];
+                lambda[nei[F]]+=alphGrad[nei[F]] & edgeMap_[iter.key()];
+                counter[own[F]]++;
+                counter[nei[F]]++;
+            }
+
+            else
+            {
+                forAll(mesh_.boundaryMesh(),patchI)
+                {
+                    if((mesh_.boundaryMesh()[patchI].start()<= F) &&
+                    (F < mesh_.boundaryMesh()[patchI].start()+mesh_.boundaryMesh()[patchI].size()))
+                    {
+                        const labelUList &pFaceCells=mesh_.boundaryMesh()[patchI].faceCells();
+                        label boundaryCellIndex=pFaceCells[F-mesh_.boundaryMesh()[patchI].start()];
+
+                        lambda[boundaryCellIndex]+=alphGrad[boundaryCellIndex] & edgeMap_[iter.key()];
+                        counter[boundaryCellIndex]++;
+                    }
+                }
+
+            }
+
+        }
+    }
+
+  //Loop over Cells and divide by counter value
+  forAll(own, cellI)
+  {
+      if(counter[cellI]!=0)
+      {
+          lambda[cellI]/=counter[cellI];
+      }
+  } 
+  counter.clear();
+  pass(tlambda.ref(),4);
 
 
     return tLambda;   

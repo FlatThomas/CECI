@@ -88,12 +88,17 @@ SourceFiles
                 return mixture_.alpha2();
             }
 
+        
+        //Pass Data from an interface field to n number of cells
+        template<class Type>
+        void pass(DimensionedField<Type, fvMesh> &intField, label n) const;
+
         //Calculate Interface Area Vector
         tmp<volVectorField> Sp() const;
 
         //Calculate Interface Offset
         tmp<volScalarField::Internal> lambda() const;
-
+        
         //Update Method
         void correct();
 

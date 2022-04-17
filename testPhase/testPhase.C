@@ -74,31 +74,6 @@ int main(int argc, char *argv[])
     #include "setInitialDeltaT.H"
     #include "createUfIfPresent.H"
 
-    Reconstruction.correct();
-    volVectorField::Internal &test=Reconstruction.Sp().ref();
-
-    forAll(mesh.C(),cellI)
-    {
-        if(alpha1[cellI]>0 && alpha1[cellI]<1)
-        {
-           // Info<<"CELL "<<cellI<<" Interface Area "<<mag(test[cellI])<<endl;
-        }
-    }
-const labelUList &own=mesh.owner();
-const labelUList &nei=mesh.neighbour();
-
-forAll(own,faceI)
-{
-    if(own[faceI]==12)
-    {
-        Info<<"OWNER "<<faceI<<endl;
-    }
-    else if(nei[faceI]==12)
-    {
-        Info<<"NEIGHBOUR "<<faceI<<endl;
-    }
-}
-
 return 0;
 }
 

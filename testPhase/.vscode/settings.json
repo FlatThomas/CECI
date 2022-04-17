@@ -19,6 +19,7 @@
         "internalTest.C": "cpp",
         "ch7e2.C": "cpp",
         "interfaceReconstruct.C": "cpp",
-        "interfaceReconstruct.H": "cpp"
+        "interfaceReconstruct.H": "cpp",
+        "tempGrad.C": "cpp"
     }
 }
