@@ -36,6 +36,7 @@ SourceFiles
 #define twoPhaseChangeModel_H
 
 #include "compressibleTwoPhaseMixture.H"
+#include "interfaceReconstruct.H"
 #include "fvMatricesFwd.H"
 #include "Pair.H"
 
@@ -92,6 +93,18 @@ public:
                 const compressibleTwoPhaseMixture& mixture
             ),
             (mixture)
+        );
+        
+        declareRunTimeSelectionTable
+        (
+            autoPtr,
+            twoPhaseChangeModel,
+            interfaceReconstruct,
+            (
+                const compressibleTwoPhaseMixture& mixture,
+                const interfaceReconstruct& interfaceR
+            ),
+            (mixture, interfaceR)
         );
 
 

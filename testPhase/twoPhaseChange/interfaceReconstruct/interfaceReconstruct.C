@@ -65,7 +65,6 @@ void Foam::interfaceReconstruct::createFaceList()
         if(interface[own[faceI]]==1 && interface[nei[faceI]]==1)
         {
             faceMap_.insert(faceI, 0);
-            Info<<"Face "<<faceI<<" added to set"<<mesh_.Cf()[faceI]<<endl;
 
         }
     }
@@ -80,7 +79,6 @@ void Foam::interfaceReconstruct::createFaceList()
            if(interface[pFaceCells[faceI]]==1)
            {
                faceMap_.insert(patch.start()+faceI,0);
-               Info<<"Face "<<patch.start()+faceI<<" from boundary added to set"<<mesh_.Cf()[patch.start()+faceI]<<endl;
            } 
         }
         
@@ -232,10 +230,11 @@ Foam::interfaceReconstruct::interfaceReconstruct(
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
 // ************************************************************************* //
-template <class Type>
-void Foam::interfaceReconstruct::pass(DimensionedField<Type, fvMesh> &intField, label n) const
+template <typename Type, class Mesh>
+void Foam::interfaceReconstruct::pass(DimensionedField<Type, Mesh> &intField, label n) const
 {
     const labelListList &cellCells=mesh_.cellCells();
+    const volScalarField &atInterface=mixture_.nearInterface().ref();
 
 
     labelList intCells;
@@ -244,25 +243,33 @@ void Foam::interfaceReconstruct::pass(DimensionedField<Type, fvMesh> &intField, 
     labelList visited(mesh_.C().size(),0);
 
 
+    Info<<"Performing Preliminary search"<<endl;
+    Info<<"..."<<endl;
     //Prelim Search
     forAll(mesh_.C(),cellI)
     {
-        if(intField[cellI]!=Zero) //Maybe a better way to do this
+        if(atInterface[cellI]==1) //Maybe a better way to do this
         {
             intCells.append(cellI);
             visited[cellI]=1;
+            Info<<"Cell "<<cellI<<" at "<<mesh_.C()[cellI]<<" added to visited"<<endl;
+            Info<<"Interface Value "<<atInterface[cellI]<<endl;
         }
     }
-
+   Info<<"DONE"<<endl; 
     //Repeat this cycle n times
     for(int i=0; i<n;i++)
     {
     
+        //Info<<"beginning loop "<<i<<" "<<endl;
         //Loop over interface cells
         forAll(intCells,cellI)
         {
-            labelList adjCells=cellCells[intField[intCells[cellI]]]; //ID cells adjacent to current cell
+            labelList adjCells=cellCells[intCells[cellI]]; //ID cells adjacent to current cell
             //Start Loop over adjacent Cells
+            //Info<<"Starting loop over adjacent cells"<<endl;
+            //Info<<"..."<<endl;
+            
             forAll(adjCells,cellJ)
             {
                 //Look for cells not already visited
@@ -279,17 +286,21 @@ void Foam::interfaceReconstruct::pass(DimensionedField<Type, fvMesh> &intField, 
                     intField[adjCells[cellJ]]+=intField[intCells[cellI]]; //add interface value to adjacent cell
                 }
             }
-
+            //Info<<"DONE"<<endl;
         }
 
         //Clear and Resize Interface Cell for next major loop
         intCells.clear();
         intCells.resize(queueCells.size());
+        Info<<"Interface cells cleared and resized"<<endl;
 
         //Loop through Queued cells and calculate Average
+        Info<<"beginning loop over iteration cells "<<endl;
         forAll(queueCells,cellI)
         {
+           
             intField[queueCells[cellI]]/=counter[queueCells[cellI]];
+            
 
             //Mark queued cells as visited
             visited[queueCells[cellI]]=1;
@@ -298,25 +309,29 @@ void Foam::interfaceReconstruct::pass(DimensionedField<Type, fvMesh> &intField, 
             intCells[cellI]=queueCells[cellI];
         }
         
+        Info<<"clearing queue for next iter"<<endl;
         queueCells.clear();
     }
+    Info<<"passing complete, exiting function"<<endl;
 }
 
-tmp<volVectorField> Foam::interfaceReconstruct::Sp() const
+tmp<volVectorField::Internal> Foam::interfaceReconstruct::Sp() const
 {
+    Info<<"Intializing Tmp Field"<<endl;
     //Standard Tmp Initialization
-    tmp<volVectorField>tSp(
-        volVectorField::New(
+    tmp<volVectorField::Internal>tSp(
+        volVectorField::Internal::New(
             "SpInt",
             mesh_,
             dimensionedVector(dimensionSet(0,2,0,0,0,0,0),vector::zero)));
-    volVectorField &Sp=tSp.ref(); 
+    volVectorField::Internal &Sp=tSp.ref(); 
 
     const labelUList &own=mesh_.owner();
     const labelUList &nei=mesh_.neighbour();
     const volVectorField &alphaNormal=mixture_.n().ref();
     const faceList &Faces=mesh_.faces();
  
+    Info<<"Looping through all elements in face map"<<endl;
     //Loop through all Elements in faceMap
     forAllConstIter(Map<bool>,faceMap_, iter)
     {
@@ -365,6 +380,11 @@ tmp<volVectorField> Foam::interfaceReconstruct::Sp() const
            }
        }
     }
+
+    Info<<"passing to neighbouring cells"<<endl;
+    pass(Sp,1);
+    Info<<"exited Pass successfully returning Sp"<<endl;
+
 
     return tSp;   
 }
@@ -433,7 +453,7 @@ tmp<volScalarField::Internal> Foam::interfaceReconstruct::lambda() const
       }
   } 
   counter.clear();
-  pass(tlambda.ref(),4);
+  pass(lambda, 1);
 
 
     return tLambda;   

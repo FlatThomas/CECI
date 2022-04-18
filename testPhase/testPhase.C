@@ -73,7 +73,27 @@ int main(int argc, char *argv[])
     #include "CourantNo.H"
     #include "setInitialDeltaT.H"
     #include "createUfIfPresent.H"
+    
+    /*Reconstruction.correct();
 
+    volVectorField test2
+    (
+        IOobject
+        (
+            "testField",
+            runTime.timeName(),
+            mesh,
+            IOobject::NO_READ,
+            IOobject::AUTO_WRITE
+        ),
+        mesh,
+        dimensionedVector("0",dimLength*dimLength, vector::zero)
+    );
+
+test2.ref()=Reconstruction.Sp().ref(); 
+Info<<"SP returned, writing field"<<endl;
+test2.write();
+*/
 return 0;
 }
 

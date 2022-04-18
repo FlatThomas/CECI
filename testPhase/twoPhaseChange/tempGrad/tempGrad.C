@@ -37,15 +37,16 @@ namespace Foam
     namespace twoPhaseChangeModels
     {
         defineTypeNameAndDebug(tempGrad, 0);
-        addToRunTimeSelectionTable(twoPhaseChangeModel, tempGrad, dictionary);
+        addToRunTimeSelectionTable(twoPhaseChangeModel, tempGrad, interfaceReconstruct);
     }
 }
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::twoPhaseChangeModels::tempGrad::tempGrad(
-    const compressibleTwoPhaseMixture &mixture)
-    : twoPhaseChangeModel(typeName, mixture)
+    const compressibleTwoPhaseMixture &mixture, const interfaceReconstruct &interfaceR)
+    : twoPhaseChangeModel(typeName, mixture),
+    _Reconstruct(interfaceR)
 {
     twoPhaseChangeModelCoeffs_.lookup("T0")>>T0;
     twoPhaseChangeModelCoeffs_.lookup("T1")>>T1;
@@ -63,6 +64,71 @@ Foam::twoPhaseChangeModels::tempGrad::mDotAlphal()
         tmp<volScalarField::Internal>(nullptr));
 }
 
+Foam::tmp<Foam::volScalarField::Internal>
+& Foam::twoPhaseChangeModels::tempGrad::liquidGradient() const
+{
+    //Standard Tmp Initialization
+    Info<<"Initializing tmpGrad field "<<endl;
+    Foam::tmp<Foam::volScalarField::Internal> tmpGrad(
+        new Foam::volScalarField::Internal(
+            IOobject(
+                "liqGrad",
+                alpha1().mesh().time().timeName(),
+                alpha1().mesh(),
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE),
+                alpha1().mesh(),
+                dimensionedScalar("liqGrad", dimensionSet(0,-3,0,1,0,0,0), 0)
+            )
+        );
+        volScalarField::Internal &Grad=tmpGrad.ref();
+
+    Info<<"DONE"<<endl<<endl; 
+
+    //Get References
+    const volScalarField::Internal &lambda=_Reconstruct.lambda().ref();
+    const fvMesh &mesh=alpha1().mesh();
+    const volScalarField::Internal &atInterface=mixture_.nearInterface().ref();
+    const labelListList &cellCells=mesh.cellCells();
+    const volScalarField::Internal &satTemp=Tsat(p()).ref();
+
+    //Other Variable Declarations
+    labelList counter(mesh.C().size());
+    
+    Info<<"Find Cells Straddling Interface "<<endl;
+    forAll(mesh.C(),cellI)
+    {
+        if(atInterface[cellI]<1 & lambda[cellI]>1e-4)
+        {
+            Info<<"Cell "<<cellI<<"near Interface "<<endl;
+            labelList nearbyIntCells;
+            //Cell is Straddling Interface, Find neighbouring interface cells
+            forAll(cellCells[cellI],cellJ)
+            {
+                if(atInterface[cellCells[cellI][cellJ]]==1)
+                {
+                    Info<<"Neighbour "<<cellJ<<" of "<<cellI<<" at interface"<<endl;
+                    nearbyIntCells.append(cellCells[cellI][cellJ]);
+                    counter[cellCells[cellI][cellJ]]++;
+                }
+            }
+
+            Info<<"calculating tempGrad at ID'd cells"<<endl;
+            forAll(nearbyIntCells,cellJ)
+            {
+                Grad[cellJ]=(T()[cellI]-satTemp[nearbyIntCells[cellJ]]);
+
+
+            }
+
+        }
+    }
+
+
+    
+    
+    return tmpGrad;
+}
 Foam::Pair<Foam::tmp<Foam::volScalarField>>
 Foam::twoPhaseChangeModels::tempGrad::mDotP() const
 {

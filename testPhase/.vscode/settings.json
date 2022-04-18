@@ -20,6 +20,9 @@
         "ch7e2.C": "cpp",
         "interfaceReconstruct.C": "cpp",
         "interfaceReconstruct.H": "cpp",
-        "tempGrad.C": "cpp"
+        "tempGrad.C": "cpp",
+        "noPhaseChange.C": "cpp",
+        "Merkle.C": "cpp",
+        "SchnerrSauer.C": "cpp"
     }
 }

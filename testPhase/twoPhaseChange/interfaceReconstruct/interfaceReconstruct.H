@@ -44,6 +44,7 @@ SourceFiles
     {
         class interfaceReconstruct
         {
+            //friend class twoPhaseChangeModel;
             const compressibleTwoPhaseMixture& mixture_;
             const fvMesh &mesh_;
             pointMesh pMesh_;
@@ -90,11 +91,11 @@ SourceFiles
 
         
         //Pass Data from an interface field to n number of cells
-        template<class Type>
-        void pass(DimensionedField<Type, fvMesh> &intField, label n) const;
+        template<typename Type, class Mesh>
+        void pass(DimensionedField<Type, Mesh> &intField, label n) const;
 
         //Calculate Interface Area Vector
-        tmp<volVectorField> Sp() const;
+        tmp<volVectorField::Internal> Sp() const;
 
         //Calculate Interface Offset
         tmp<volScalarField::Internal> lambda() const;

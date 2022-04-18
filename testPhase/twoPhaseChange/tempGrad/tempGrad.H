@@ -36,6 +36,7 @@ SourceFiles
 #define tempGrad_H
 
 #include "twoPhaseChangeModel.H"
+#include "interfaceReconstruct.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -44,7 +45,7 @@ namespace Foam
     namespace twoPhaseChangeModels
     {
 
-        /*---------------------------------------------------------------------------*\
+/*---------------------------------------------------------------------------*\
                                  Class tempGrad
 \*---------------------------------------------------------------------------*/
 
@@ -55,6 +56,7 @@ namespace Foam
             dimensionedScalar T1;
             dimensionedScalar T2;
             dimensionedScalar T3;
+            const interfaceReconstruct &_Reconstruct;
 
         public:
             //- Runtime type information
@@ -64,7 +66,7 @@ namespace Foam
 
             //- Construct for mixture
             tempGrad(
-                const compressibleTwoPhaseMixture &mixture);
+                const compressibleTwoPhaseMixture &mixture, const interfaceReconstruct &interfaceR);
 
             //- Destructor
             virtual ~tempGrad()
@@ -97,61 +99,8 @@ namespace Foam
             }
 
             //Calculate Liquid Gradient 
-            Foam::tmp<Foam::volScalarField::Internal> &liquidGradient() const
-            {
-                const volScalarField::Internal &alpha1_=alpha1();
-                const Foam::fvMesh &mesh=alpha1_.mesh();
-                const volScalarField::Internal &Temp=T();
-
-
-                //Find Liquid Cells that are near interface
-                //alpha==1 && neighbour(need to figure out how this works..
-                const labelUList& own=mesh.owner();
-                const labelUList& nei=mesh.neighbour();
-                const volScalarField& interface(mixture_.nearInterface().ref());
-                tmp<volScalarField::Internal> tNearIntT(
-                        volScalarField::Internal::New(
-                            "nearIntT",
-                            mesh,
-                            dimensionedScalar(dimensionSet(0,0,0,1,0,0,0),0)));
-                           
-                volScalarField::Internal &nearIntT=tNearIntT.ref();
-                
-                forAll(own, faceI)
-                {
-                    //Owner is at Interface, check neighbour alpha
-                    if(interface[own[faceI]]!=0)
-                    {
-                        if(alpha1_[nei[faceI]]==1)
-                        {
-                            nearIntT[nei[faceI]]=Temp[nei[faceI]];                            
-                        }
-
-                    }
-                    //Neighbour is at Interface, check owner alpha
-                    if(interface[nei[faceI]]!=0)
-                    {
-                        if(alpha1_[own[faceI]]==1)
-                        {
-                            nearIntT[own[faceI]]=Temp[own[faceI]];
-                        }
-
-                    }
-
-                }
- 
-               //Shortest distance from cell center to interface
-
-
-               //Calculate Temp Gradient
-    
-                forAll(nearIntT,cellI)
-                {
-                    Info<<nearIntT[cellI]<<endl;
-                    Info<<alpha1_[cellI]<<endl;
-                }
-                return tNearIntT;
-            }
+            Foam::tmp<Foam::volScalarField::Internal> &liquidGradient() const;
+            
                 
             
             tmp<volScalarField::Internal>
