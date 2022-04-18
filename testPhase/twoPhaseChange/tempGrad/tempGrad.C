@@ -90,42 +90,91 @@ Foam::tmp<Foam::volScalarField::Internal>
     const fvMesh &mesh=alpha1().mesh();
     const volScalarField::Internal &atInterface=mixture_.nearInterface().ref();
     const labelListList &cellCells=mesh.cellCells();
+    const volVectorField::Internal &alphaN=mixture_.n().ref();
     const volScalarField::Internal &satTemp=Tsat(p()).ref();
+    
 
     //Other Variable Declarations
     labelList counter(mesh.C().size());
+    labelList interfaceCells;
+    labelList dataCells;
     
-    Info<<"Find Cells Straddling Interface "<<endl;
-    forAll(mesh.C(),cellI)
-    {
-        if(atInterface[cellI]<1 & lambda[cellI]>1e-4)
+   Info<<"Find Cells Straddling Interface "<<endl;
+   forAll(mesh.C(),cellI)
+   {
+       if(atInterface[cellI]<1 && lambda[cellI]>1e-4 && alpha1()[cellI]==1)
+       {
+           Info<<"Cell "<<cellI<<"near Interface "<<endl;
+           labelList nearbyIntCells;
+           //Cell is Straddling Interface, Find neighbouring interface cells
+           forAll(cellCells[cellI],cellJ)
+           {
+               if(atInterface[cellCells[cellI][cellJ]]==1)
+               {
+                   Info<<"Neighbour "<<cellJ<<" of "<<cellI<<" at interface"<<endl;
+                   nearbyIntCells.append(cellCells[cellI][cellJ]);
+                   counter[cellCells[cellI][cellJ]]++;
+               }
+              
+           }
+
+           Info<<"calculating tempGrad at ID'd cells"<<endl;
+           forAll(nearbyIntCells,cellJ)
+           {
+               Grad[cellJ]+=mag(((T()[cellI]-satTemp[nearbyIntCells[cellJ]])/lambda[cellI])
+               *alphaN[cellI]);
+           }
+       }
+       //Flag Interface Cells for faster looping down the line
+       if(atInterface[cellI]==1)
+       {
+           interfaceCells.append(cellI);
+       }
+        
+   }
+
+   forAll(interfaceCells,cellI)
+   {
+        labelList nearbyCells;
+        bool breaker=0;
+            
+        //Loop through neighbouring cells
+        forAll(cellCells[interfaceCells[cellI]],cellJ)
         {
-            Info<<"Cell "<<cellI<<"near Interface "<<endl;
-            labelList nearbyIntCells;
-            //Cell is Straddling Interface, Find neighbouring interface cells
-            forAll(cellCells[cellI],cellJ)
+            //Break Loop if cell has a liquid neighbour and flip switch 
+            if(alpha1()[cellCells[cellI][cellJ]]==1)
             {
-                if(atInterface[cellCells[cellI][cellJ]]==1)
-                {
-                    Info<<"Neighbour "<<cellJ<<" of "<<cellI<<" at interface"<<endl;
-                    nearbyIntCells.append(cellCells[cellI][cellJ]);
-                    counter[cellCells[cellI][cellJ]]++;
-                }
+                breaker=true;
+                break;
             }
-
-            Info<<"calculating tempGrad at ID'd cells"<<endl;
-            forAll(nearbyIntCells,cellJ)
+            //Also see if cell has neighbour at interface
+            else if(atInterface[cellCells[cellI][cellJ]]==1)
             {
-                Grad[cellJ]=(T()[cellI]-satTemp[nearbyIntCells[cellJ]]);
-
-
+                nearbyCells.append(cellCells[cellI][cellJ]);
+                counter[cellCells[cellI][cellJ]]++;
             }
-
+        } 
+        
+        //Only Assign values of breaker wasn't flipped
+        if(breaker==false)
+        {
+            forAll(nearbyCells,cellJ)
+            {
+                //Only assign grad if breaker was not flipped
+                Grad[cellI]+=Grad[nearbyCells[cellJ]];
+            }
         }
     }
+     
 
-
-    
+    Info<<"calculating average grad value at cell"<<endl;
+    forAll(interfaceCells,cellI)
+    {
+        if(counter[interfaceCells[cellI]]!=0)
+        {
+            Grad[interfaceCells[cellI]]/=counter[interfaceCells[cellI]];
+        }
+    }
     
     return tmpGrad;
 }
