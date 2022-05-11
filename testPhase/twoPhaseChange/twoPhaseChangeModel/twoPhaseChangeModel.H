@@ -128,6 +128,11 @@ public:
         (
             const compressibleTwoPhaseMixture& mixture
         );
+        static autoPtr<twoPhaseChangeModel> New 
+        (
+            const compressibleTwoPhaseMixture& mixture,
+            const interfaceReconstruct& interfaceR
+        );
 
 
     //- Destructor

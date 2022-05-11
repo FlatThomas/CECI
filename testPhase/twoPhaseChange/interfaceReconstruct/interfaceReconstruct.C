@@ -34,79 +34,77 @@ namespace Foam
 // * * * * * * * * * * * * * Private Member Functions  * * * * * * * * * * * //
 void Foam::interfaceReconstruct::calculateAlphaP()
 {
-    alpha1P_=vpi_.interpolate(mixture_.alpha1());       
+    alpha1P_ = vpi_.interpolate(mixture_.alpha1());
 }
 
 void Foam::interfaceReconstruct::createEdgeIndexing()
 {
-    Info<<"creating edge indexing "<<endl;
-    const edgeList &Edges=mesh_.edges();
-    //edgeIndex_.resize(Edges.size());
+    Info << "creating edge indexing " << endl;
+    const edgeList &Edges = mesh_.edges();
+    // edgeIndex_.resize(Edges.size());
 
-    forAll(Edges,i)
+    forAll(Edges, i)
     {
-        edgeIndex_.set(Edges[i],i);
-        //Info<<"Edge "<<i<<"added to set"<<endl;
+        edgeIndex_.set(Edges[i], i);
+        // Info<<"Edge "<<i<<"added to set"<<endl;
     }
 }
 
 void Foam::interfaceReconstruct::createFaceList()
 {
-    Info<<"Creating Interface Faces List"<<endl;
-    //Variable Declarations
-    const labelUList& own=mesh_.owner();
-    const labelUList& nei=mesh_.neighbour();
+    Info << "Creating Interface Faces List" << endl;
+    // Variable Declarations
+    const labelUList &own = mesh_.owner();
+    const labelUList &nei = mesh_.neighbour();
 
-    const volScalarField::Internal & interface(mixture_.nearInterface().ref());
-    
+    const volScalarField::Internal &interface(mixture_.nearInterface().ref());
+
     forAll(own, faceI)
     {
-        //Find owner neighbour pairs both at interface
-        if(interface[own[faceI]]==1 && interface[nei[faceI]]==1)
+        // Find owner neighbour pairs both at interface
+        if (interface[own[faceI]] == 1 && interface[nei[faceI]] == 1)
         {
             faceMap_.insert(faceI, 0);
-
         }
     }
 
-    forAll(mesh_.boundaryMesh(),patchI)
+    forAll(mesh_.boundaryMesh(), patchI)
     {
-        const polyPatch& patch=mesh_.boundaryMesh()[patchI];
-        const labelUList& pFaceCells=patch.faceCells();
+        const polyPatch &patch = mesh_.boundaryMesh()[patchI];
+        const labelUList &pFaceCells = patch.faceCells();
 
-        forAll(patch,faceI)
+        forAll(patch, faceI)
         {
-           if(interface[pFaceCells[faceI]]==1)
-           {
-               faceMap_.insert(patch.start()+faceI,0);
-           } 
+            if (interface[pFaceCells[faceI]] == 1)
+            {
+                faceMap_.insert(patch.start() + faceI, 0);
+            }
         }
-        
     }
-    
+
     faceMap_.shrink();
-    //PreAllocate Space on EdgeMaps
-    //edgeMapb_.resize(4*faceMap_.size());
-    //edgeMap_.resize(2*faceMap_.size());
+    // PreAllocate Space on EdgeMaps
+    // edgeMapb_.resize(4*faceMap_.size());
+    // edgeMap_.resize(2*faceMap_.size());
 }
 
 void Foam::interfaceReconstruct::findBoundaryEdges()
 {
-    Info<<"finding boundary edges"<<endl;
+    Info << "finding boundary edges" << endl;
 
     boundaryEdges_.resize(mesh_.edges().size());
 
-    forAll(mesh_.boundaryMesh(),patchI)
+    forAll(mesh_.boundaryMesh(), patchI)
     {
-        //Get Boundary Faces on patch
-        const faceList & boundaryFaces=mesh_.boundaryMesh()[patchI];
-        forAll(boundaryFaces,FaceI)
+        // Get Boundary Faces on patch
+        const faceList &boundaryFaces = mesh_.boundaryMesh()[patchI];
+        forAll(boundaryFaces, FaceI)
         {
-            const edgeList &E=boundaryFaces[FaceI].edges();
-        
-            forAll(E,EdgeI)
+            const edgeList &E = boundaryFaces[FaceI].edges();
+
+            forAll(E, EdgeI)
             {
-                boundaryEdges_.set(E[EdgeI],1);
+                boundaryEdges_.set(E[EdgeI], 1);
             }
         }
     }
@@ -114,113 +112,109 @@ void Foam::interfaceReconstruct::findBoundaryEdges()
 }
 void Foam::interfaceReconstruct::generateEdgeFaceList()
 {
-    Info<<"Generating EdgeFaceList"<<endl;
-    const edgeList &Edges=mesh_.edges();
-    const faceList &Faces=mesh_.faces();
+    Info << "Generating EdgeFaceList" << endl;
+    const edgeList &Edges = mesh_.edges();
+    const faceList &Faces = mesh_.faces();
     edgeFaces_.setSize(Edges.size());
 
-    forAll(Faces,faceI)
+    forAll(Faces, faceI)
     {
-       const edgeList &fE=Faces[faceI].edges();
-       forAll(fE,EdgeI)
-       {
-           label edgeName=edgeIndex_[fE[EdgeI]];
-           if(edgeFaces_[edgeName]==labelList::null())
-           {
-               bool isBoundaryEdge=0;
-               
-               if(boundaryEdges_.found(fE[EdgeI])==true)
-               {
-                   isBoundaryEdge=1;
-               }
+        const edgeList &fE = Faces[faceI].edges();
+        forAll(fE, EdgeI)
+        {
+            label edgeName = edgeIndex_[fE[EdgeI]];
+            if (edgeFaces_[edgeName] == labelList::null())
+            {
+                bool isBoundaryEdge = 0;
 
-                edgeFaceCirculator circ(mesh_,faceI,1,EdgeI,isBoundaryEdge);
-                labelList eF;
-                for (edgeFaceCirculator iter=circ.begin(); iter != circ.end(); ++iter) 
+                if (boundaryEdges_.found(fE[EdgeI]) == true)
                 {
-                   eF.append(iter.faceLabel());
+                    isBoundaryEdge = 1;
                 }
 
-                edgeFaces_[edgeName]=eF;
-           }
-       }
-    }
+                edgeFaceCirculator circ(mesh_, faceI, 1, EdgeI, isBoundaryEdge);
+                labelList eF;
+                for (edgeFaceCirculator iter = circ.begin(); iter != circ.end(); ++iter)
+                {
+                    eF.append(iter.faceLabel());
+                }
 
-}
-
-void Foam::interfaceReconstruct::DFS(label i)
-{
-    //Info<<"starting DFS loop"<<endl;
-    //Mark Current Face as visited
-    faceMap_.set(i,1);
-    const edgeList &fEdges=mesh_.faces()[i].edges();
-
-    //Loop Over Edges in Face
-    for(label edgeI=0; edgeI<fEdges.size(); edgeI++)
-    {
-        
-        //Check if Edge is on List
-        
-        if(edgeMapb_.found(fEdges[edgeI])==false)
-        {
-            //Info<<"Edge not found, entering inner loop"<<endl;
-
-            //Add to list
-            const edge &E1=fEdges[edgeI];
-            edgeMapb_.insert(E1,1);
-
-            if((sign(alpha1P_[E1[0]]-.5)+sign(alpha1P_[E1[1]]-.5))==0)    //Check if Face has .5 somewherebetween verts
-            {
-                //Info<<"Edge meets criteria, calculated interface point"<<endl;
-               //Designations to help clean up code 
-               const vector &x1=mesh_.points()[E1[0]];
-               const vector &x2=mesh_.points()[E1[1]];
-               const scalar &a1=alpha1P_[E1[0]];
-               const scalar &a2=alpha1P_[E1[1]];
-               
-               //Calculate Interpolated Value
-               vector linInterp=x1+(x2-x1)*((.5-a1)/(a2-a1));
-            
-               //Info<<"Linear Interpolation Value found at point "<<linInterp[0]<<" "<<linInterp[1]<<endl;
-               //Store in hash table
-               edgeMap_.insert(E1,linInterp);
-
-            }
-
-            //Jump to an unvisited Face
-            //Info<<"finding edge index"<<endl;
-            const label &edgeName=edgeIndex_[E1];
-            //Info<<"finding connected faces "<<endl;
-            const labelList connectedFaces=edgeFaces_[edgeName];
-            
-            forAll(connectedFaces,faceI)
-            {
-                if(faceMap_.found(connectedFaces[faceI])==true)
-                    {
-                        if(faceMap_[connectedFaces[faceI]]==0)
-                        {
-                            DFS(connectedFaces[faceI]);
-                        }
-                    }
+                edgeFaces_[edgeName] = eF;
             }
         }
     }
 }
 
+void Foam::interfaceReconstruct::DFS(label i)
+{
+    // Info<<"starting DFS loop"<<endl;
+    // Mark Current Face as visited
+    faceMap_.set(i, 1);
+    const edgeList &fEdges = mesh_.faces()[i].edges();
+
+    // Loop Over Edges in Face
+    for (label edgeI = 0; edgeI < fEdges.size(); edgeI++)
+    {
+
+        // Check if Edge is on List
+
+        if (edgeMapb_.found(fEdges[edgeI]) == false)
+        {
+            // Info<<"Edge not found, entering inner loop"<<endl;
+
+            // Add to list
+            const edge &E1 = fEdges[edgeI];
+            edgeMapb_.insert(E1, 1);
+
+            if ((sign(alpha1P_[E1[0]] - .5) + sign(alpha1P_[E1[1]] - .5)) == 0) // Check if Face has .5 somewherebetween verts
+            {
+                // Info<<"Edge meets criteria, calculated interface point"<<endl;
+                // Designations to help clean up code
+                const vector &x1 = mesh_.points()[E1[0]];
+                const vector &x2 = mesh_.points()[E1[1]];
+                const scalar &a1 = alpha1P_[E1[0]];
+                const scalar &a2 = alpha1P_[E1[1]];
+
+                // Calculate Interpolated Value
+                vector linInterp = x1 + (x2 - x1) * ((.5 - a1) / (a2 - a1));
+
+                // Info<<"Linear Interpolation Value found at point "<<linInterp[0]<<" "<<linInterp[1]<<endl;
+                // Store in hash table
+                edgeMap_.insert(E1, linInterp);
+            }
+
+            // Jump to an unvisited Face
+            // Info<<"finding edge index"<<endl;
+            const label &edgeName = edgeIndex_[E1];
+            // Info<<"finding connected faces "<<endl;
+            const labelList connectedFaces = edgeFaces_[edgeName];
+
+            forAll(connectedFaces, faceI)
+            {
+                if (faceMap_.found(connectedFaces[faceI]) == true)
+                {
+                    if (faceMap_[connectedFaces[faceI]] == 0)
+                    {
+                        DFS(connectedFaces[faceI]);
+                    }
+                }
+            }
+        }
+    }
+}
 
 // * * * * * * * * * * * * * * * * Constructors  * * * * * * * * * * * * * * //
 
 Foam::interfaceReconstruct::interfaceReconstruct(
-    const compressibleTwoPhaseMixture &mixture):
-    mixture_(mixture), 
-    mesh_(alpha1().mesh()),
-    pMesh_(mesh_),
-    vpi_(mesh_),
-    faceMap_(mesh_.faces().size()),
-    alpha1P_(vpi_.interpolate(mixture_.alpha1()))
-        
+    const compressibleTwoPhaseMixture &mixture) : mixture_(mixture),
+                                                  mesh_(alpha1().mesh()),
+                                                  pMesh_(mesh_),
+                                                  vpi_(mesh_),
+                                                  faceMap_(mesh_.faces().size()),
+                                                  alpha1P_(vpi_.interpolate(mixture_.alpha1()))
+
 {
-    //calculateAlphaP();
+    // calculateAlphaP();
     createFaceList();
     createEdgeIndexing();
     findBoundaryEdges();
@@ -233,234 +227,220 @@ Foam::interfaceReconstruct::interfaceReconstruct(
 template <typename Type, class Mesh>
 void Foam::interfaceReconstruct::pass(DimensionedField<Type, Mesh> &intField, label n) const
 {
-    const labelListList &cellCells=mesh_.cellCells();
-    const volScalarField &atInterface=mixture_.nearInterface().ref();
-
+    const labelListList &cellCells = mesh_.cellCells();
+    const volScalarField &atInterface = mixture_.nearInterface().ref();
 
     labelList intCells;
     labelList queueCells;
-    labelList counter(mesh_.C().size(),0);
-    labelList visited(mesh_.C().size(),0);
+    labelList counter(mesh_.C().size(), 0);
+    labelList visited(mesh_.C().size(), 0);
 
-
-    Info<<"Performing Preliminary search"<<endl;
-    Info<<"..."<<endl;
-    //Prelim Search
-    forAll(mesh_.C(),cellI)
+    // Prelim Search
+    forAll(mesh_.C(), cellI)
     {
-        if(atInterface[cellI]==1) //Maybe a better way to do this
+        if (atInterface[cellI] == 1) // Maybe a better way to do this
         {
             intCells.append(cellI);
-            visited[cellI]=1;
-            Info<<"Cell "<<cellI<<" at "<<mesh_.C()[cellI]<<" added to visited"<<endl;
-            Info<<"Interface Value "<<atInterface[cellI]<<endl;
+            visited[cellI] = 1;
         }
     }
-   Info<<"DONE"<<endl; 
-    //Repeat this cycle n times
-    for(int i=0; i<n;i++)
+    // Repeat this cycle n times
+    for (int i = 0; i < n; i++)
     {
-    
-        //Info<<"beginning loop "<<i<<" "<<endl;
-        //Loop over interface cells
-        forAll(intCells,cellI)
-        {
-            labelList adjCells=cellCells[intCells[cellI]]; //ID cells adjacent to current cell
-            //Start Loop over adjacent Cells
-            //Info<<"Starting loop over adjacent cells"<<endl;
-            //Info<<"..."<<endl;
-            
-            forAll(adjCells,cellJ)
-            {
-                //Look for cells not already visited
-                if(visited[adjCells[cellJ]]==0)
-                {
-                    counter[adjCells[cellJ]]++; //Counter for average
 
-                    //Add to index if first time being visited
-                    if(counter[adjCells[cellJ]]==1)
+        // Info<<"beginning loop "<<i<<" "<<endl;
+        // Loop over interface cells
+        forAll(intCells, cellI)
+        {
+            labelList adjCells = cellCells[intCells[cellI]]; // ID cells adjacent to current cell
+            // Start Loop over adjacent Cells
+            // Info<<"Starting loop over adjacent cells"<<endl;
+            // Info<<"..."<<endl;
+
+            forAll(adjCells, cellJ)
+            {
+                // Look for cells not already visited
+                if (visited[adjCells[cellJ]] == 0)
+                {
+                    counter[adjCells[cellJ]]++; // Counter for average
+
+                    // Add to index if first time being visited
+                    if (counter[adjCells[cellJ]] == 1)
                     {
                         queueCells.append(adjCells[cellJ]);
                     }
 
-                    intField[adjCells[cellJ]]+=intField[intCells[cellI]]; //add interface value to adjacent cell
+                    intField[adjCells[cellJ]] += intField[intCells[cellI]]; // add interface value to adjacent cell
                 }
             }
-            //Info<<"DONE"<<endl;
+            // Info<<"DONE"<<endl;
         }
 
-        //Clear and Resize Interface Cell for next major loop
+        // Clear and Resize Interface Cell for next major loop
         intCells.clear();
         intCells.resize(queueCells.size());
-        Info<<"Interface cells cleared and resized"<<endl;
 
-        //Loop through Queued cells and calculate Average
-        Info<<"beginning loop over iteration cells "<<endl;
-        forAll(queueCells,cellI)
+        // Loop through Queued cells and calculate Average
+        forAll(queueCells, cellI)
         {
-           
-            intField[queueCells[cellI]]/=counter[queueCells[cellI]];
-            
 
-            //Mark queued cells as visited
-            visited[queueCells[cellI]]=1;
-            
-            //Move Queued Cells to Interface
-            intCells[cellI]=queueCells[cellI];
+            intField[queueCells[cellI]] /= counter[queueCells[cellI]];
+
+            // Mark queued cells as visited
+            visited[queueCells[cellI]] = 1;
+
+            // Move Queued Cells to Interface
+            intCells[cellI] = queueCells[cellI];
         }
-        
-        Info<<"clearing queue for next iter"<<endl;
+
         queueCells.clear();
     }
-    Info<<"passing complete, exiting function"<<endl;
 }
 
 tmp<volVectorField::Internal> Foam::interfaceReconstruct::Sp() const
 {
-    Info<<"Intializing Tmp Field"<<endl;
-    //Standard Tmp Initialization
-    tmp<volVectorField::Internal>tSp(
+    // Standard Tmp Initialization
+    Info << "Entering SP" << endl;
+    tmp<volVectorField::Internal> tSp(
         volVectorField::Internal::New(
             "SpInt",
             mesh_,
-            dimensionedVector(dimensionSet(0,2,0,0,0,0,0),vector::zero)));
-    volVectorField::Internal &Sp=tSp.ref(); 
+            dimensionedVector(dimensionSet(0, 2, 0, 0, 0, 0, 0), vector::zero)));
+    volVectorField::Internal &Sp = tSp.ref();
 
-    const labelUList &own=mesh_.owner();
-    const labelUList &nei=mesh_.neighbour();
-    const volVectorField &alphaNormal=mixture_.n().ref();
-    const faceList &Faces=mesh_.faces();
- 
-    Info<<"Looping through all elements in face map"<<endl;
-    //Loop through all Elements in faceMap
-    forAllConstIter(Map<bool>,faceMap_, iter)
+    const labelUList &own = mesh_.owner();
+    const labelUList &nei = mesh_.neighbour();
+    const volVectorField &alphaNormal = mixture_.n().ref();
+    const faceList &Faces = mesh_.faces();
+
+    // Loop through all Elements in faceMap
+    forAllConstIter(Map<bool>, faceMap_, iter)
     {
-       label F=iter.key();
+        label F = iter.key();
 
-       List<vector> V;
+        List<vector> V;
 
-       forAll(Faces[F].edges(),edgeI)
-       {
-           if(edgeMap_.found(Faces[F].edges()[edgeI])==true)
-           {
-                V.append(edgeMap_[Faces[F].edges()[edgeI]]); 
-           }
-       }
-
-       vector xproduct=0.5*(V[0]^V[1]);
-
-       if(F<own.size())
-       {
-            //Flip if Wrong Direction
-            if((xproduct & alphaNormal[own[F]])<=0)
+        forAll(Faces[F].edges(), edgeI)
+        {
+            if (edgeMap_.found(Faces[F].edges()[edgeI]) == true)
             {
-                xproduct=.5*(V[1]^V[0]);
+                V.append(edgeMap_[Faces[F].edges()[edgeI]]);
             }
-
-            Sp[own[F]]+=xproduct;
-            Sp[nei[F]]-=xproduct;
         }
 
-       else
-       {
-           forAll(mesh_.boundaryMesh(),patchI)
-           {
-               if((mesh_.boundaryMesh()[patchI].start()<= F) &&
-               (F < mesh_.boundaryMesh()[patchI].start()+mesh_.boundaryMesh()[patchI].size()))
-               {
-                    const labelUList &pFaceCells=mesh_.boundaryMesh()[patchI].faceCells();
-                    //Info<<"Face "<<F<<" in patch "<<patchI<<endl;
+        vector xproduct = 0.5 * (V[0] ^ V[1]);
 
-                    if((xproduct & alphaNormal[pFaceCells[F-mesh_.boundaryMesh()[patchI].start()]])<=0)
+        if (F < own.size())
+        {
+            // Flip if Wrong Direction
+            if ((xproduct & alphaNormal[own[F]]) <= 0)
+            {
+                xproduct = .5 * (V[1] ^ V[0]);
+            }
+
+            Sp[own[F]] += xproduct;
+            Sp[nei[F]] -= xproduct;
+        }
+
+        else
+        {
+            forAll(mesh_.boundaryMesh(), patchI)
+            {
+                if ((mesh_.boundaryMesh()[patchI].start() <= F) &&
+                    (F < mesh_.boundaryMesh()[patchI].start() + mesh_.boundaryMesh()[patchI].size()))
+                {
+                    const labelUList &pFaceCells = mesh_.boundaryMesh()[patchI].faceCells();
+                    // Info<<"Face "<<F<<" in patch "<<patchI<<endl;
+
+                    if ((xproduct & alphaNormal[pFaceCells[F - mesh_.boundaryMesh()[patchI].start()]]) <= 0)
                     {
-                        xproduct=.5*(V[1]^V[0]);
+                        xproduct = .5 * (V[1] ^ V[0]);
                     }
-                    Sp[pFaceCells[F-mesh_.boundaryMesh()[patchI].start()]]+=xproduct;
-               }
-           }
-       }
+                    Sp[pFaceCells[F - mesh_.boundaryMesh()[patchI].start()]] += xproduct;
+                }
+            }
+        }
     }
 
-    Info<<"passing to neighbouring cells"<<endl;
-    pass(Sp,1);
-    Info<<"exited Pass successfully returning Sp"<<endl;
+    pass(Sp, 1);
+    Info << "exited Pass successfully returning Sp" << endl;
 
-
-    return tSp;   
+    return tSp;
 }
 
 tmp<volScalarField::Internal> Foam::interfaceReconstruct::lambda() const
 {
-    //Standard Tmp initialization
-    tmp<volScalarField::Internal>tLambda(
-            volScalarField::Internal::New(
-                "lambdaInt",
-                mesh_,
-                dimensionedScalar(dimensionSet(0,1,0,0,0,0,0),0)));
+    // Standard Tmp initialization
+    Info << "Entering Lambda function" << endl;
+    tmp<volScalarField::Internal> tLambda(
+        volScalarField::Internal::New(
+            "lambda",
+            mesh_,
+            dimensionedScalar(dimensionSet(0, 1, 0, 0, 0, 0, 0), 0)));
 
-    volScalarField::Internal &lambda=tLambda.ref();
-    labelList counter(mesh_.nCells());
+    volScalarField::Internal &lambda = tLambda.ref();
+    labelList counter(mesh_.nCells(), 0);
 
+    const labelUList &own = mesh_.owner();
+    const labelUList &nei = mesh_.neighbour();
+    const volVectorField &alphGrad = mixture_.n().ref();
 
-    const labelUList &own=mesh_.owner();
-    const labelUList &nei=mesh_.neighbour();
-    const volVectorField &alphGrad=mixture_.n().ref();
-
-    for(HashTable<vector,edge,Hash<edge>>::const_iterator iter=edgeMap_.cbegin(); iter!=edgeMap_.end(); iter++)
+    Info << "entering lambda for loop" << endl;
+    for (HashTable<vector, edge, Hash<edge>>::const_iterator iter = edgeMap_.cbegin(); iter != edgeMap_.end(); iter++)
     {
-        edge eI=iter.key();
-        label edgeLabel=edgeIndex_[eI];
-        const labelList &eFaces=edgeFaces_[edgeLabel];
+        edge eI = iter.key();
+        label edgeLabel = edgeIndex_[eI];
+        const labelList &eFaces = edgeFaces_[edgeLabel];
 
-        forAll(eFaces,faceI)
+        forAll(eFaces, faceI)
         {
-            label F=eFaces[faceI];
+            label F = eFaces[faceI];
 
-            if(eFaces[faceI]<own.size())
+            if (eFaces[faceI] < own.size())
             {
-                lambda[own[F]]+=alphGrad[own[F]] & edgeMap_[iter.key()];
-                lambda[nei[F]]+=alphGrad[nei[F]] & edgeMap_[iter.key()];
+                lambda[own[F]] += alphGrad[own[F]] & edgeMap_[iter.key()];
+                lambda[nei[F]] += alphGrad[nei[F]] & edgeMap_[iter.key()];
                 counter[own[F]]++;
                 counter[nei[F]]++;
             }
 
             else
             {
-                forAll(mesh_.boundaryMesh(),patchI)
+                forAll(mesh_.boundaryMesh(), patchI)
                 {
-                    if((mesh_.boundaryMesh()[patchI].start()<= F) &&
-                    (F < mesh_.boundaryMesh()[patchI].start()+mesh_.boundaryMesh()[patchI].size()))
+                    if ((mesh_.boundaryMesh()[patchI].start() <= F) &&
+                        (F < mesh_.boundaryMesh()[patchI].start() + mesh_.boundaryMesh()[patchI].size()))
                     {
-                        const labelUList &pFaceCells=mesh_.boundaryMesh()[patchI].faceCells();
-                        label boundaryCellIndex=pFaceCells[F-mesh_.boundaryMesh()[patchI].start()];
+                        const labelUList &pFaceCells = mesh_.boundaryMesh()[patchI].faceCells();
+                        label boundaryCellIndex = pFaceCells[F - mesh_.boundaryMesh()[patchI].start()];
 
-                        lambda[boundaryCellIndex]+=alphGrad[boundaryCellIndex] & edgeMap_[iter.key()];
+                        lambda[boundaryCellIndex] += alphGrad[boundaryCellIndex] & edgeMap_[iter.key()];
                         counter[boundaryCellIndex]++;
                     }
                 }
-
             }
-
         }
     }
 
-  //Loop over Cells and divide by counter value
-  forAll(own, cellI)
-  {
-      if(counter[cellI]!=0)
-      {
-          lambda[cellI]/=counter[cellI];
-      }
-  } 
-  counter.clear();
-  pass(lambda, 1);
+    Info << "calculating averages " << endl;
+    // Loop over Cells and divide by counter value
 
+    forAll(mesh_.C(), cellI)
+    {
+        if (counter[cellI] != 0)
+        {
+            lambda[cellI] /= counter[cellI];
+        }
+    }
+    Info << " loop exited, clearing counter " << endl;
+    Info << "passing lambda " << endl;
+    pass(lambda, 1);
+    Info << "lambda successfully passed, returning " << endl;
 
-    return tLambda;   
+    return tLambda;
 }
 void Foam::interfaceReconstruct::correct()
 {
-    Info<<"Starting Correction Loop"<<endl;
+    Info << "Starting Correction Loop" << endl;
     DFS(faceMap_.begin().key());
-    
 }

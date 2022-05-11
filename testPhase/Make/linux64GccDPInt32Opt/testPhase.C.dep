@@ -9,6 +9,7 @@ $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/CrankNicolsonDdtScheme.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/subCycle.H \
 compressibleInterPhaseTransportModel/lnInclude/compressibleInterPhaseTransportModel.H \
 twoPhaseChange/lnInclude/leeModel.H \
+twoPhaseChange/lnInclude/tempGrad.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/pimpleControl.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/pressureReference.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/fvModels.H \
@@ -28,6 +29,7 @@ createFieldRefs.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/CourantNo.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/setInitialDeltaT.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/createUfIfPresent.H \
+interfaceSmearing.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/parRun.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/Time.H \
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/fvMesh.H \
@@ -935,6 +937,7 @@ $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/CrankNicolsonDdtScheme.H :
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/subCycle.H :
 compressibleInterPhaseTransportModel/lnInclude/compressibleInterPhaseTransportModel.H :
 twoPhaseChange/lnInclude/leeModel.H :
+twoPhaseChange/lnInclude/tempGrad.H :
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/pimpleControl.H :
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/pressureReference.H :
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/fvModels.H :
@@ -954,6 +957,7 @@ createFieldRefs.H :
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/CourantNo.H :
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/setInitialDeltaT.H :
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/createUfIfPresent.H :
+interfaceSmearing.H :
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/parRun.H :
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/Time.H :
 $(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/fvMesh.H :

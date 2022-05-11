@@ -24,8 +24,6 @@ License
 \*---------------------------------------------------------------------------*/
 
 #include "noPhaseChange.H"
-#include "leeModel.H"
-#include "tempGrad.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
@@ -81,5 +79,58 @@ Foam::autoPtr<Foam::twoPhaseChangeModel> Foam::twoPhaseChangeModel::New
     return autoPtr<twoPhaseChangeModel>(cstrIter()(mixture));
 }
 
+Foam::autoPtr<Foam::twoPhaseChangeModel> Foam::twoPhaseChangeModel::New
+(
+    const compressibleTwoPhaseMixture& mixture, const interfaceReconstruct& interfaceR
+)
+{
+    typeIOobject<IOdictionary> twoPhaseChangeModelIO
+    (
+        IOobject
+        (
+            phaseChangePropertiesName,
+            mixture.alpha1().time().constant(),
+            mixture.alpha1().db(),
+            IOobject::MUST_READ,
+            IOobject::NO_WRITE,
+            false
+        )
+    );
+
+    word modelType(twoPhaseChangeModels::noPhaseChange::typeName);
+
+    if (twoPhaseChangeModelIO.headerOk())
+    {
+        IOdictionary(twoPhaseChangeModelIO).lookup
+        (
+            twoPhaseChangeModel::typeName
+        ) >> modelType;
+    }
+    else
+    {
+        Info<< "No phase change: "
+            << twoPhaseChangeModelIO.name()
+            << " not found" << endl;
+    }
+
+    Info<< "Selecting phaseChange model " << modelType << endl;
+
+    interfaceReconstructConstructorTable::iterator cstrIter =
+        interfaceReconstructConstructorTablePtr_->find(modelType);
+
+    if (cstrIter == interfaceReconstructConstructorTablePtr_->end())
+    {
+        FatalErrorInFunction
+            << "Unknown " << twoPhaseChangeModel::typeName<< " type "
+            << modelType << nl << nl
+            << "Valid  twoPhaseChangeModels are : " << endl
+            << interfaceReconstructConstructorTablePtr_->sortedToc()
+            << exit(FatalError);
+    }
+
+    Info<<"Hello!"<<endl;
+    return autoPtr<twoPhaseChangeModel>(cstrIter()(mixture, interfaceR));
+    
+}
 
 // ************************************************************************* //

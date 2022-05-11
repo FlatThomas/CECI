@@ -32,6 +32,7 @@ namespace Foam
     defineTypeNameAndDebug(twoPhaseChangeModel, 0);
     defineRunTimeSelectionTable(twoPhaseChangeModel, dictionary);
     defineRunTimeSelectionTable(twoPhaseChangeModel,interfaceReconstruct);
+    
 }
 
 const Foam::word Foam::twoPhaseChangeModel::phaseChangePropertiesName

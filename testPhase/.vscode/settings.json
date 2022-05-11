@@ -23,6 +23,9 @@
         "tempGrad.C": "cpp",
         "noPhaseChange.C": "cpp",
         "Merkle.C": "cpp",
-        "SchnerrSauer.C": "cpp"
+        "SchnerrSauer.C": "cpp",
+        "compressibleInterFoam.C": "cpp",
+        "eddyDiffusivity.H": "cpp",
+        "blockMesh.C": "cpp"
     }
 }

@@ -46,16 +46,16 @@ namespace Foam
 Foam::twoPhaseChangeModels::tempGrad::tempGrad(
     const compressibleTwoPhaseMixture &mixture, const interfaceReconstruct &interfaceR)
     : twoPhaseChangeModel(typeName, mixture),
-    _Reconstruct(interfaceR)
+      _Reconstruct(interfaceR)
 {
-    twoPhaseChangeModelCoeffs_.lookup("T0")>>T0;
-    twoPhaseChangeModelCoeffs_.lookup("T1")>>T1;
-    twoPhaseChangeModelCoeffs_.lookup("T2")>>T2;
-    twoPhaseChangeModelCoeffs_.lookup("T3")>>T3;
+    twoPhaseChangeModelCoeffs_.lookup("T0") >> T0;
+    twoPhaseChangeModelCoeffs_.lookup("T1") >> T1;
+    twoPhaseChangeModelCoeffs_.lookup("T2") >> T2;
+    twoPhaseChangeModelCoeffs_.lookup("T3") >> T3;
 }
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
 
-//Calculate Sharp Mass Transfer Values Values
+// Calculate Sharp Mass Transfer Values Values
 Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
 Foam::twoPhaseChangeModels::tempGrad::mDotAlphal()
 {
@@ -65,10 +65,11 @@ Foam::twoPhaseChangeModels::tempGrad::mDotAlphal()
 }
 
 Foam::tmp<Foam::volScalarField::Internal>
-& Foam::twoPhaseChangeModels::tempGrad::liquidGradient() const
+Foam::twoPhaseChangeModels::tempGrad::Gradient(
+    const Foam::volScalarField::Internal &dint, const scalar &a) const
 {
-    //Standard Tmp Initialization
-    Info<<"Initializing tmpGrad field "<<endl;
+    // Standard Tmp Initialization
+    Info << "Initializing tmpGrad field " << endl;
     Foam::tmp<Foam::volScalarField::Internal> tmpGrad(
         new Foam::volScalarField::Internal(
             IOobject(
@@ -77,135 +78,201 @@ Foam::tmp<Foam::volScalarField::Internal>
                 alpha1().mesh(),
                 IOobject::NO_READ,
                 IOobject::AUTO_WRITE),
-                alpha1().mesh(),
-                dimensionedScalar("liqGrad", dimensionSet(0,-3,0,1,0,0,0), 0)
-            )
-        );
-        volScalarField::Internal &Grad=tmpGrad.ref();
+            alpha1().mesh(),
+            dimensionedScalar("liqGrad", dimensionSet(0, -3, 0, 1, 0, 0, 0), 0)));
+    volScalarField::Internal &Grad = tmpGrad.ref();
 
-    Info<<"DONE"<<endl<<endl; 
+    Info << "DONE" << endl
+         << endl;
 
-    //Get References
-    const volScalarField::Internal &lambda=_Reconstruct.lambda().ref();
-    const fvMesh &mesh=alpha1().mesh();
-    const volScalarField::Internal &atInterface=mixture_.nearInterface().ref();
-    const labelListList &cellCells=mesh.cellCells();
-    const volVectorField::Internal &alphaN=mixture_.n().ref();
-    const volScalarField::Internal &satTemp=Tsat(p()).ref();
-    
+    // Get References
+    const fvMesh &mesh = alpha1().mesh();
+    const labelListList &cellCells = mesh.cellCells();
 
-    //Other Variable Declarations
-    labelList counter(mesh.C().size());
+    tmp<volScalarField> tatInterface = mixture_.nearInterface();
+    const volScalarField &atInterface = tatInterface.ref();
+
+    tmp<volVectorField> talphaN = mixture_.n();
+    const volVectorField::Internal &alphaN = talphaN.ref();
+
+    tmp<volScalarField::Internal> tsatTemp = Tsat(p());
+    const volScalarField::Internal &satTemp = tsatTemp.ref();
+
+    // Other Variable Declarations
+    labelList counter(mesh.C().size(), 0);
     labelList interfaceCells;
     labelList dataCells;
-    
-   Info<<"Find Cells Straddling Interface "<<endl;
-   forAll(mesh.C(),cellI)
-   {
-       if(atInterface[cellI]<1 && lambda[cellI]>1e-4 && alpha1()[cellI]==1)
-       {
-           Info<<"Cell "<<cellI<<"near Interface "<<endl;
-           labelList nearbyIntCells;
-           //Cell is Straddling Interface, Find neighbouring interface cells
-           forAll(cellCells[cellI],cellJ)
-           {
-               if(atInterface[cellCells[cellI][cellJ]]==1)
-               {
-                   Info<<"Neighbour "<<cellJ<<" of "<<cellI<<" at interface"<<endl;
-                   nearbyIntCells.append(cellCells[cellI][cellJ]);
-                   counter[cellCells[cellI][cellJ]]++;
-               }
-              
-           }
 
-           Info<<"calculating tempGrad at ID'd cells"<<endl;
-           forAll(nearbyIntCells,cellJ)
-           {
-               Grad[cellJ]+=mag(((T()[cellI]-satTemp[nearbyIntCells[cellJ]])/lambda[cellI])
-               *alphaN[cellI]);
-           }
-       }
-       //Flag Interface Cells for faster looping down the line
-       if(atInterface[cellI]==1)
-       {
-           interfaceCells.append(cellI);
-       }
-        
-   }
+    Info << "Find Cells Straddling Interface " << endl;
+    Info << endl;
 
-   forAll(interfaceCells,cellI)
-   {
-        labelList nearbyCells;
-        bool breaker=0;
-            
-        //Loop through neighbouring cells
-        forAll(cellCells[interfaceCells[cellI]],cellJ)
+    forAll(mesh.C(), cellI)
+    {
+        if (dint[cellI] > 1e-4 && alpha1()[cellI] == a)
         {
-            //Break Loop if cell has a liquid neighbour and flip switch 
-            if(alpha1()[cellCells[cellI][cellJ]]==1)
+            labelList nearbyIntCells;
+            // Cell is Straddling Interface, Find neighbouring interface cells
+            forAll(cellCells[cellI], cellJ)
             {
-                breaker=true;
+                if (atInterface[cellCells[cellI][cellJ]] == 1)
+                {
+                    nearbyIntCells.append(cellCells[cellI][cellJ]);
+                    counter[cellCells[cellI][cellJ]]++;
+                }
+            }
+
+            // Info << "calculating tempGrad at ID'd cells" << endl;
+            forAll(nearbyIntCells, cellJ)
+            {
+                Grad[nearbyIntCells[cellJ]] += mag(((T()[cellI] - satTemp[nearbyIntCells[cellJ]]) / dint[cellI]) * alphaN[cellI]);
+                /*Info << "Cell " << nearbyIntCells[cellJ] << endl;
+                Info << "Temp at cell " << T()[cellI] << endl;
+                Info << "Alpha N at cell " << alphaN[cellI] << endl;
+                Info << satTemp[nearbyIntCells[cellJ]] << endl;
+                Info << "gradient at cell " << nearbyIntCells[cellJ] << " is " << Grad[nearbyIntCells[cellJ]] << endl;
+                Info << "count at a value of " << counter[nearbyIntCells[cellJ]] << endl;
+                Info << "dint value of " << dint[cellI] << endl;
+                Info << endl;*/
+            }
+        }
+        // Flag Interface Cells for faster looping down the line
+        if (atInterface[cellI] == 1)
+        {
+            interfaceCells.append(cellI);
+        }
+    }
+
+    // Reduce Memory
+    talphaN.clear();
+    tsatTemp.clear();
+
+    Info << "Beginning Interface Loop" << endl;
+    forAll(interfaceCells, cellI)
+    {
+        labelList nearbyCells;
+        bool breaker = 0;
+        const label currentCell = interfaceCells[cellI];
+        const labelList &cellNeighbours = cellCells[currentCell];
+
+        // Loop through neighbouring cells
+        forAll(cellNeighbours, cellJ)
+        {
+            // Break Loop if cell has a liquid neighbour and flip switch
+            if (alpha1()[cellNeighbours[cellJ]] == a)
+            {
+                // Info << "Cell " << cellNeighbours[cellJ] << " flipped breaker! " << endl;
+                breaker = true;
                 break;
             }
-            //Also see if cell has neighbour at interface
-            else if(atInterface[cellCells[cellI][cellJ]]==1)
-            {
-                nearbyCells.append(cellCells[cellI][cellJ]);
-                counter[cellCells[cellI][cellJ]]++;
-            }
-        } 
-        
-        //Only Assign values of breaker wasn't flipped
-        if(breaker==false)
-        {
-            forAll(nearbyCells,cellJ)
-            {
-                //Only assign grad if breaker was not flipped
-                Grad[cellI]+=Grad[nearbyCells[cellJ]];
-            }
         }
-    }
-     
 
-    Info<<"calculating average grad value at cell"<<endl;
-    forAll(interfaceCells,cellI)
-    {
-        if(counter[interfaceCells[cellI]]!=0)
+        if (breaker == false)
         {
-            Grad[interfaceCells[cellI]]/=counter[interfaceCells[cellI]];
+            forAll(cellNeighbours, cellJ)
+            {
+                if (atInterface[cellNeighbours[cellJ]] == 1)
+                {
+                    Grad[currentCell] += Grad[nearbyCells[cellJ]];
+                    counter[cellNeighbours[cellJ]]++;
+                }
+            }
         }
     }
-    
+    tatInterface.clear();
+
+    Info << "calculating average grad value at cell" << endl;
+    forAll(interfaceCells, cellI)
+    {
+        if (counter[interfaceCells[cellI]] != 0)
+        {
+            Grad[interfaceCells[cellI]] /= counter[interfaceCells[cellI]];
+            // Info << "counter value " << counter[interfaceCells[cellI]] << endl;
+            // Info << "Gradient at cell " << interfaceCells[cellI] << " is " << Grad[interfaceCells[cellI]] << endl;
+        }
+    }
+
     return tmpGrad;
 }
 Foam::Pair<Foam::tmp<Foam::volScalarField>>
 Foam::twoPhaseChangeModels::tempGrad::mDotP() const
 {
-        return Pair<tmp<volScalarField>>(
+    return Pair<tmp<volScalarField>>(
         tmp<volScalarField>(nullptr),
         tmp<volScalarField>(nullptr));
 }
-   
-
 
 Foam::Pair<Foam::tmp<Foam::volScalarField::Internal>>
 Foam::twoPhaseChangeModels::tempGrad::Salpha(
     volScalarField &alpha) const
 {
-      return Pair<tmp<volScalarField::Internal>>
-          (
-           tmp<volScalarField::Internal>(nullptr),
-           tmp<volScalarField::Internal>(nullptr)
-          );
-        
-        
+
+    const fvMesh &mesh = alpha.mesh();
+    const tmp<volVectorField> intNormal = mixture_.n();
+    const tmp<volScalarField::Internal> lam = _Reconstruct.lambda();
+    const volScalarField::Internal dint = mag((mesh.C() & intNormal.ref()).ref() - lam.ref());
+    lam.clear();
+    intNormal.clear();
+
+    Info << "Initializing temp sharp rho field" << endl;
+    // Standard Tmp INitialization
+    tmp<volScalarField::Internal> trhoS(
+        new volScalarField::Internal(
+            IOobject(
+                "rhoS",
+                mesh.time().timeName(),
+                mesh,
+                IOobject::NO_READ,
+                IOobject::AUTO_WRITE),
+
+            mesh,
+            dimensionedScalar("rhoS", dimMass / dimTime, 0)));
+
+    volScalarField::Internal &rhoS = trhoS.ref();
+    Info << "DONE" << endl;
+
+    // Rando Refs
+    tmp<volVectorField::Internal> tintArea = _Reconstruct.Sp();
+    const volVectorField::Internal &intArea = tintArea.ref();
+
+    // Grab Thermal Conductivity Refs
+    const volScalarField &kL = mixture_.thermo1().kappa();
+    const volScalarField &kV = mixture_.thermo2().kappa();
+
+    // Calc Temp Grad at interface due to liquid and vapor
+    Info << "calculating liquid gradient " << endl;
+    tmp<volScalarField::Internal> tlgrad = Gradient(dint, 1);
+    volScalarField::Internal lgrad = tlgrad.ref();
+    Info << "calculating vapor gradient " << endl;
+    tmp<volScalarField::Internal> tvgrad = Gradient(dint, 0);
+    volScalarField::Internal vgrad = tvgrad.ref();
+
+    forAll(mesh.C(), cellI)
+    {
+        if (lgrad[cellI] > 1e-4 || vgrad[cellI] > 1e-4)
+        {
+            rhoS[cellI] = ((-kL[cellI] * lgrad[cellI] + kV[cellI] * vgrad[cellI]) / (2260.0 * 10e3)) * mag(intArea[cellI]);
+            /*Info << "Interface Area " << mag(intArea[cellI]) << endl;
+            Info << "Liquid Heat Xfer " << -kL[cellI] * lgrad[cellI] << endl;
+            Info << "Vapor Heat Xfer " << kV[cellI] * vgrad[cellI] << endl;
+            Info << "Calculated mass transfer " << rhoS[cellI] << endl;
+            Info << endl;*/
+        }
+    }
+
+    rhoS /= mesh.V();
+
+    tmp<volScalarField::Internal> trhoS2(-1 * rhoS);
+
+    return Pair<tmp<volScalarField::Internal>>(
+        trhoS,
+        trhoS2);
 }
 
 Foam::tmp<Foam::fvScalarMatrix>
 Foam::twoPhaseChangeModels::tempGrad::Sp_rgh(
     const volScalarField &rho,
     const volScalarField &gh,
-          volScalarField &p_rgh) const
+    volScalarField &p_rgh) const
 {
     return tmp<fvScalarMatrix>(new fvScalarMatrix(p_rgh, dimVolume / dimTime));
 }
@@ -214,7 +281,7 @@ Foam::tmp<Foam::fvVectorMatrix>
 Foam::twoPhaseChangeModels::tempGrad::SU(
     const volScalarField &rho,
     const surfaceScalarField &rhoPhi,
-          volVectorField &U) const
+    volVectorField &U) const
 {
     return tmp<fvVectorMatrix>(
         new fvVectorMatrix(U, dimMass * dimVelocity / dimTime));

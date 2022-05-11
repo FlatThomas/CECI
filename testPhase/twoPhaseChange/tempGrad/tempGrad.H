@@ -25,7 +25,7 @@ Class
     Foam::twoPhaseChangeModels::tempGrad
 
 Description
-   Temp Gradient Based Model Based off Kunkleman's Thesis 
+   Temp Gradient Based Model Based off Kunkleman's Thesis
 
 SourceFiles
     tempGrad.C
@@ -45,9 +45,9 @@ namespace Foam
     namespace twoPhaseChangeModels
     {
 
-/*---------------------------------------------------------------------------*\
-                                 Class tempGrad
-\*---------------------------------------------------------------------------*/
+        /*---------------------------------------------------------------------------*\
+                                         Class tempGrad
+        \*---------------------------------------------------------------------------*/
 
         class tempGrad
             : public twoPhaseChangeModel
@@ -98,11 +98,10 @@ namespace Foam
                 return p;
             }
 
-            //Calculate Liquid Gradient 
-            Foam::tmp<Foam::volScalarField::Internal> &liquidGradient() const;
-            
-                
-            
+            // Calculate Liquid Gradient
+            Foam::tmp<Foam::volScalarField::Internal> Gradient(
+                const volScalarField::Internal &dint, const scalar &a) const;
+
             tmp<volScalarField::Internal>
             Tsat(const volScalarField::Internal &P) const
             {
@@ -117,11 +116,11 @@ namespace Foam
                             IOobject::AUTO_WRITE),
 
                         P.mesh(),
-                        dimensionedScalar("Tsat", dimensionSet(0,0,0, 1,0,0,0), 0)));
+                        dimensionedScalar("Tsat", dimensionSet(0, 0, 0, 1, 0, 0, 0), 0)));
 
                 volScalarField::Internal &Tsat = tmpTsat.ref();
 
-                    Tsat=T0+T1*P+T2*pow(P,2)+T3*pow(P,3);
+                Tsat = T0 + T1 * P + T2 * pow(P, 2) + T3 * pow(P, 3);
 
                 return tmpTsat;
             }
@@ -168,6 +167,5 @@ namespace Foam
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 #endif
-
 
 // ************************************************************************* //
