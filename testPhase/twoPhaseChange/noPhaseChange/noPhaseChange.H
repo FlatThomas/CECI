@@ -41,84 +41,71 @@ SourceFiles
 
 namespace Foam
 {
-namespace twoPhaseChangeModels
-{
+    namespace twoPhaseChangeModels
+    {
 
-/*---------------------------------------------------------------------------*\
-                                 Class noPhaseChange
-\*---------------------------------------------------------------------------*/
+        /*---------------------------------------------------------------------------*\
+                                         Class noPhaseChange
+        \*---------------------------------------------------------------------------*/
 
-class noPhaseChange
-:
-    public twoPhaseChangeModel
-{
+        class noPhaseChange
+            : public twoPhaseChangeModel
+        {
 
-public:
+        public:
+            //- Runtime type information
+            TypeName("none");
 
-    //- Runtime type information
-    TypeName("none");
+            // Constructors
 
+            //- Construct for mixture
+            noPhaseChange(
+                const compressibleTwoPhaseMixture &mixture);
 
-    // Constructors
+            //- Destructor
+            virtual ~noPhaseChange()
+            {
+            }
 
-        //- Construct for mixture
-        noPhaseChange
-        (
-            const compressibleTwoPhaseMixture& mixture
-        );
+            // Member Functions
 
+            //- Return the mass condensation and vaporisation rates as a
+            //  coefficient to multiply (1 - alphal) for the condensation rate
+            //  and a coefficient to multiply  alphal for the vaporisation rate
+            virtual Pair<tmp<volScalarField>> mDotAlphal() const;
 
-    //- Destructor
-    virtual ~noPhaseChange()
-    {}
+            //- Return the mass condensation and vaporisation rates as coefficients
+            //  to multiply (p - pSat)
+            virtual Pair<tmp<volScalarField>> mDotP() const;
 
+            //- Return unallocated explicit and implicit sources
+            //  for the phase-fraction equation
+            virtual Pair<tmp<volScalarField::Internal>> Salpha(
+                volScalarField &) const;
 
-    // Member Functions
+            //- Return the zero source matrix
+            //  for the p_rgh pressure equation
+            virtual tmp<fvScalarMatrix> Sp_rgh(
+                const volScalarField &rho,
+                const volScalarField &gh,
+                volScalarField &p_rgh) const;
 
-        //- Return the mass condensation and vaporisation rates as a
-        //  coefficient to multiply (1 - alphal) for the condensation rate
-        //  and a coefficient to multiply  alphal for the vaporisation rate
-        virtual Pair<tmp<volScalarField>> mDotAlphal() const;
+            //- Return the zero source matrix for the momentum equation
+            virtual tmp<fvVectorMatrix> SU(
+                const volScalarField &rho,
+                const surfaceScalarField &rhoPhi,
+                volVectorField &U) const;
 
-        //- Return the mass condensation and vaporisation rates as coefficients
-        //  to multiply (p - pSat)
-        virtual Pair<tmp<volScalarField>> mDotP() const;
+            //- Correct the noPhaseChange phaseChange model
+            virtual void correct();
 
-        //- Return unallocated explicit and implicit sources
-        //  for the phase-fraction equation
-        virtual Pair<tmp<volScalarField::Internal>> Salpha
-        (
-            volScalarField&
-        ) const;
+            //- Read the phaseProperties dictionary and update
+            virtual bool read();
+        };
 
-        //- Return the zero source matrix
-        //  for the p_rgh pressure equation
-        virtual tmp<fvScalarMatrix> Sp_rgh
-        (
-            const volScalarField& rho,
-            const volScalarField& gh,
-            volScalarField& p_rgh
-        ) const;
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-        //- Return the zero source matrix for the momentum equation
-        virtual tmp<fvVectorMatrix> SU
-        (
-            const volScalarField& rho,
-            const surfaceScalarField& rhoPhi,
-            volVectorField& U
-        ) const;
-
-        //- Correct the noPhaseChange phaseChange model
-        virtual void correct();
-
-        //- Read the phaseProperties dictionary and update
-        virtual bool read();
-};
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace twoPhaseChangeModels
+    } // End namespace twoPhaseChangeModels
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

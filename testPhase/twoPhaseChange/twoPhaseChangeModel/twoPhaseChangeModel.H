@@ -35,162 +35,130 @@ SourceFiles
 #ifndef twoPhaseChangeModel_H
 #define twoPhaseChangeModel_H
 
-#include "compressibleTwoPhaseMixture.H"
-#include "interfaceReconstruct.H"
-#include "fvMatricesFwd.H"
 #include "Pair.H"
+#include "compressibleTwoPhaseMixture.H"
+#include "fvMatricesFwd.H"
+#include "interfaceReconstruct.H"
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-namespace Foam
-{
+namespace Foam {
 
 /*---------------------------------------------------------------------------*\
                  Class twoPhaseChangeModel Declaration
 \*---------------------------------------------------------------------------*/
 
-class twoPhaseChangeModel
-:
-    public IOdictionary
+class twoPhaseChangeModel : public IOdictionary
 {
-    // Private Member Functions
+  // Private Member Functions
 
-        //- Construct the base IO object
-        IOobject createIOobject
-        (
-            const compressibleTwoPhaseMixture& mixture
-        ) const;
-
+  //- Construct the base IO object
+  IOobject createIOobject(const compressibleTwoPhaseMixture& mixture) const;
 
 protected:
+  // Protected data
 
-    // Protected data
+  //- Reference to the two-phase mixture
+  const compressibleTwoPhaseMixture& mixture_;
 
-        //- Reference to the two-phase mixture
-        const compressibleTwoPhaseMixture& mixture_;
-
-        //- Model coefficient dictionary
-        dictionary twoPhaseChangeModelCoeffs_;
-
+  //- Model coefficient dictionary
+  dictionary twoPhaseChangeModelCoeffs_;
 
 public:
+  //- Runtime type information
+  TypeName("phaseChangeModel");
 
-    //- Runtime type information
-    TypeName("phaseChangeModel");
+  //- Default phaseChangeProperties dictionary name
+  static const word phaseChangePropertiesName;
 
-    //- Default phaseChangeProperties dictionary name
-    static const word phaseChangePropertiesName;
+  // Declare run-time constructor selection table
 
+  declareRunTimeSelectionTable(autoPtr,
+                               twoPhaseChangeModel,
+                               dictionary,
+                               (const compressibleTwoPhaseMixture& mixture),
+                               (mixture));
 
-    // Declare run-time constructor selection table
+  declareRunTimeSelectionTable(autoPtr,
+                               twoPhaseChangeModel,
+                               interfaceReconstruct,
+                               (const compressibleTwoPhaseMixture& mixture,
+                                const interfaceReconstruct& interfaceR),
+                               (mixture, interfaceR));
 
-        declareRunTimeSelectionTable
-        (
-            autoPtr,
-            twoPhaseChangeModel,
-            dictionary,
-            (
-                const compressibleTwoPhaseMixture& mixture
-            ),
-            (mixture)
-        );
-        
-        declareRunTimeSelectionTable
-        (
-            autoPtr,
-            twoPhaseChangeModel,
-            interfaceReconstruct,
-            (
-                const compressibleTwoPhaseMixture& mixture,
-                const interfaceReconstruct& interfaceR
-            ),
-            (mixture, interfaceR)
-        );
+  // Constructors
 
+  //- Construct from dictionary
+  twoPhaseChangeModel(const word& type,
+                      const compressibleTwoPhaseMixture& mixture);
 
-    // Constructors
+  //- Disallow default bitwise copy construction
+  twoPhaseChangeModel(const twoPhaseChangeModel&);
 
-        //- Construct from dictionary
-        twoPhaseChangeModel
-        (
-            const word& type,
-            const compressibleTwoPhaseMixture& mixture
-        );
+  // Selectors
 
-        //- Disallow default bitwise copy construction
-        twoPhaseChangeModel(const twoPhaseChangeModel&);
+  //- Return a reference to the selected phaseChange model
+  static autoPtr<twoPhaseChangeModel> New(
+    const compressibleTwoPhaseMixture& mixture);
+  static autoPtr<twoPhaseChangeModel> New(
+    const compressibleTwoPhaseMixture& mixture,
+    const interfaceReconstruct& interfaceR);
 
+  //- Destructor
+  virtual ~twoPhaseChangeModel() {}
 
-    // Selectors
+  // Member Functions
 
-        //- Return a reference to the selected phaseChange model
-        static autoPtr<twoPhaseChangeModel> New
-        (
-            const compressibleTwoPhaseMixture& mixture
-        );
-        static autoPtr<twoPhaseChangeModel> New 
-        (
-            const compressibleTwoPhaseMixture& mixture,
-            const interfaceReconstruct& interfaceR
-        );
+  //- Return the internal field of the density of phase 1
+  const volScalarField::Internal& rho1() const { return mixture_.rho1(); }
 
+  //- Return the internal field of the density of phase 2
+  const volScalarField::Internal& rho2() const { return mixture_.rho2(); }
 
-    //- Destructor
-    virtual ~twoPhaseChangeModel()
-    {}
+  const volScalarField::Internal& rho() const { return mixture_.rho(); }
 
+  virtual tmp<volScalarField::Internal> latentHeat(
+    const volScalarField::Internal& T) const
+  {
+    return tmp<volScalarField::Internal>(nullptr);
+  };
 
-    // Member Functions
+  //- Calculate RhoSharp For interface smearing calc
+  virtual Pair<tmp<volScalarField::Internal>> RhoDotSharp(
+    const volScalarField& alpha) const
+  {
+    return Pair<tmp<volScalarField::Internal>>(
+      tmp<volScalarField::Internal>(nullptr),
+      tmp<volScalarField::Internal>(nullptr));
+  };
 
-        //- Return the internal field of the density of phase 1
-        const volScalarField::Internal& rho1() const
-        {
-            return mixture_.rho1();
-        }
+  //- Return the phase-change explicit and implicit sources
+  //  for the phase-fraction equation
+  virtual Pair<tmp<volScalarField::Internal>> Salpha(
+    volScalarField& alpha) const = 0;
 
-        //- Return the internal field of the density of phase 2
-        const volScalarField::Internal& rho2() const
-        {
-            return mixture_.rho2();
-        }
+  //- Return the phase-change source matrix
+  //  for the p_rgh pressure equation
+  virtual tmp<fvScalarMatrix> Sp_rgh(const volScalarField& rho,
+                                     const volScalarField& gh,
+                                     volScalarField& p_rgh) const = 0;
 
-        //- Return the phase-change explicit and implicit sources
-        //  for the phase-fraction equation
-        virtual Pair<tmp<volScalarField::Internal>> Salpha
-        (
-            volScalarField& alpha
-        ) const = 0;
+  //- Return the phase-change source matrix for the momentum equation
+  virtual tmp<fvVectorMatrix> SU(const volScalarField& rho,
+                                 const surfaceScalarField& rhoPhi,
+                                 volVectorField& U) const = 0;
 
-        //- Return the phase-change source matrix
-        //  for the p_rgh pressure equation
-        virtual tmp<fvScalarMatrix> Sp_rgh
-        (
-            const volScalarField& rho,
-            const volScalarField& gh,
-            volScalarField& p_rgh
-        ) const = 0;
+  //- Correct the phaseChange model
+  virtual void correct() = 0;
 
-        //- Return the phase-change source matrix for the momentum equation
-        virtual tmp<fvVectorMatrix> SU
-        (
-            const volScalarField& rho,
-            const surfaceScalarField& rhoPhi,
-            volVectorField& U
-        ) const = 0;
+  //- Read the phaseProperties dictionary and update
+  virtual bool read() = 0;
 
-        //- Correct the phaseChange model
-        virtual void correct() = 0;
+  // Member Operators
 
-        //- Read the phaseProperties dictionary and update
-        virtual bool read() = 0;
-
-
-    // Member Operators
-
-        //- Disallow default bitwise assignment
-        void operator=(const twoPhaseChangeModel&) = delete;
+  //- Disallow default bitwise assignment
+  void operator=(const twoPhaseChangeModel&) = delete;
 };
-
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 

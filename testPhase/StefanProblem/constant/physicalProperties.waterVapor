@@ -1,0 +1,49 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+  =========                 |
+  \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox
+   \\    /   O peration     | Website:  https://openfoam.org
+    \\  /    A nd           | Version:  dev
+     \\/     M anipulation  |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+thermoType
+{
+    type            heRhoThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hPolynomial;
+    equationOfState perfectGas;
+    specie          specie;
+    energy          sensibleEnthalpy;
+}
+
+mixture                                                                        
+{                                                                              
+    specie                                                                     
+    {                                                                          
+        molWeight       18.0;                                                  
+    }                                                                          
+    thermodynamics                                                             
+    {                                                                          
+        CpCoeffs<8>     (1790 0.107 5.86e-4 -2e-7 0 0 0 0);   
+        Sf              10444.44;                                                     
+        Hf              0; 
+    }                                                                          
+                                                                              
+    transport                                                                  
+    {                                                                          
+        mu          1.9e-5;
+        Pr          0.947;
+    }                                                                          
+}
+
+// ************************************************************************* //

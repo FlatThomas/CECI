@@ -55,69 +55,61 @@ SourceFiles
 
 namespace Foam
 {
-namespace twoPhaseChangeModels
-{
+    namespace twoPhaseChangeModels
+    {
 
-/*---------------------------------------------------------------------------*\
-                                 Class Kunz
-\*---------------------------------------------------------------------------*/
+        /*---------------------------------------------------------------------------*\
+                                         Class Kunz
+        \*---------------------------------------------------------------------------*/
 
-class Kunz
-:
-    public cavitationModel
-{
-    // Private Data
+        class Kunz
+            : public cavitationModel
+        {
+            // Private Data
 
-        dimensionedScalar UInf_;
-        dimensionedScalar tInf_;
-        dimensionedScalar Cc_;
-        dimensionedScalar Cv_;
+            dimensionedScalar UInf_;
+            dimensionedScalar tInf_;
+            dimensionedScalar Cc_;
+            dimensionedScalar Cv_;
 
-        dimensionedScalar p0_;
+            dimensionedScalar p0_;
 
+        public:
+            //- Runtime type information
+            TypeName("Kunz");
 
-public:
+            // Constructors
 
-    //- Runtime type information
-    TypeName("Kunz");
+            //- Construct for mixture
+            Kunz(
+                const compressibleTwoPhaseMixture &mixture);
 
+            //- Destructor
+            virtual ~Kunz()
+            {
+            }
 
-    // Constructors
+            // Member Functions
 
-        //- Construct for mixture
-        Kunz
-        (
-            const compressibleTwoPhaseMixture& mixture
-        );
+            //- Return the mass condensation and vaporisation rates as a
+            //  coefficient to multiply (1 - alphal) for the condensation rate
+            //  and a coefficient to multiply  alphal for the vaporisation rate
+            virtual Pair<tmp<volScalarField::Internal>> mDotAlphal() const;
 
+            //- Return the mass condensation and vaporisation rates as coefficients
+            //  to multiply (p - pSat)
+            virtual Pair<tmp<volScalarField::Internal>> mDotP() const;
 
-    //- Destructor
-    virtual ~Kunz()
-    {}
+            //- Correct the Kunz phaseChange model
+            virtual void correct();
 
+            //- Read the phaseProperties dictionary and update
+            virtual bool read();
+        };
 
-    // Member Functions
+        // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-        //- Return the mass condensation and vaporisation rates as a
-        //  coefficient to multiply (1 - alphal) for the condensation rate
-        //  and a coefficient to multiply  alphal for the vaporisation rate
-        virtual Pair<tmp<volScalarField::Internal>> mDotAlphal() const;
-
-        //- Return the mass condensation and vaporisation rates as coefficients
-        //  to multiply (p - pSat)
-        virtual Pair<tmp<volScalarField::Internal>> mDotP() const;
-
-        //- Correct the Kunz phaseChange model
-        virtual void correct();
-
-        //- Read the phaseProperties dictionary and update
-        virtual bool read();
-};
-
-
-// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-
-} // End namespace twoPhaseChangeModels
+    } // End namespace twoPhaseChangeModels
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

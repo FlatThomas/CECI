@@ -26,9 +26,9 @@ Application
 
 Description
     Solver for 2 compressible, non-isothermal immiscible fluids using a VOF
-    (volume of fluid) phase-fraction based interface capturing approach, including models for evaporation/condensation
-    mass transfer with optional mesh motion and mesh topology changes including adaptive
-    re-meshing.
+    (volume of fluid) phase-fraction based interface capturing approach,
+including models for evaporation/condensation mass transfer with optional mesh
+motion and mesh topology changes including adaptive re-meshing.
 
     The momentum and other fluid properties are of the "mixture" and a single
     momentum equation is solved.
@@ -48,7 +48,9 @@ Description
 #include "CrankNicolsonDdtScheme.H"
 #include "subCycle.H"
 #include "compressibleInterPhaseTransportModel.H"
+#include "noPhaseChange.H"
 #include "leeModel.H"
+#include "interfaceReconstruct.H"
 #include "tempGrad.H"
 #include "pimpleControl.H"
 #include "pressureReference.H"
@@ -57,10 +59,10 @@ Description
 #include "CorrectPhi.H"
 #include "fvcSmooth.H"
 #include "heavySide.H"
-#include "interfaceReconstruct.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
-int main(int argc, char *argv[])
+int
+main(int argc, char* argv[])
 {
 #include "postProcess.H"
 
@@ -71,121 +73,97 @@ int main(int argc, char *argv[])
 #include "createDyMControls.H"
 #include "createFields.H"
 #include "createFieldRefs.H"
+#include "interfaceSmearing.H"
 #include "CourantNo.H"
 #include "setInitialDeltaT.H"
 #include "createUfIfPresent.H"
 
-    // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
-    Info << "\nStarting time loop\n"
-         << endl;
+  // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+  Info << "\nStarting time loop\n" << endl;
 
-    while (pimple.run(runTime))
-    {
-#include "readDyMControls.H"
+  while (pimple.run(runTime)) {
+    #include "readDyMControls.H"
 
-        if (LTS)
-        {
-#include "setRDeltaT.H"
+    if (LTS) {
+              #include "setRDeltaT.H"
+    } else {
+              #include "CourantNo.H"
+              #include "alphaCourantNo.H"
+              #include "setDeltaT.H"
+    }
+
+    runTime++;
+
+    Info << "Time = " << runTime.userTimeName() << nl << endl;
+
+    // --- Pressure-velocity PIMPLE corrector loop
+    while (pimple.loop()) {
+      if (pimple.firstPimpleIter() || moveMeshOuterCorrectors) {
+        // Store divU from the previous mesh so that it can be mapped
+        // and used in correctPhi to ensure the corrected phi has the
+        // same divergence
+        tmp<volScalarField> divU;
+
+        if (correctPhi) {
+          // Construct and register divU for mapping
+          divU = new volScalarField("divU0", fvc::div(fvc::absolute(phi, U)));
         }
-        else
-        {
-#include "CourantNo.H"
-#include "alphaCourantNo.H"
-#include "setDeltaT.H"
-        }
 
-        runTime++;
+        fvModels.preUpdateMesh();
 
-        Info << "Time = " << runTime.userTimeName() << nl << endl;
+        mesh.update();
 
-        // --- Pressure-velocity PIMPLE corrector loop
-        while (pimple.loop())
-        {
-            if (pimple.firstPimpleIter() || moveMeshOuterCorrectors)
-            {
-                // Store divU from the previous mesh so that it can be mapped
-                // and used in correctPhi to ensure the corrected phi has the
-                // same divergence
-                tmp<volScalarField> divU;
+        if (mesh.changing()) {
+          gh = (g & mesh.C()) - ghRef;
+          ghf = (g & mesh.Cf()) - ghRef;
 
-                if (correctPhi)
-                {
-                    // Construct and register divU for mapping
-                    divU = new volScalarField(
-                        "divU0",
-                        fvc::div(fvc::absolute(phi, U)));
-                }
-
-                fvModels.preUpdateMesh();
-
-                mesh.update();
-
-                if (mesh.changing())
-                {
-                    gh = (g & mesh.C()) - ghRef;
-                    ghf = (g & mesh.Cf()) - ghRef;
-
-                    MRF.update();
-
-                    if (correctPhi)
-                    {
+          MRF.update();
+          if (correctPhi) {
 #include "correctPhi.H"
-                    }
+          }
 
-                    mixture.correct();
+          mixture.correct();
 
-                    if (checkMeshCourantNo)
-                    {
+          if (checkMeshCourantNo) {
 #include "meshCourantNo.H"
-                    }
-                }
+          }
+        }
 
-                divU.clear();
-            }
+        divU.clear();
+      }
 
-            fvModels.correct();
-
+      fvModels.correct();
 #include "alphaControls.H"
 #include "compressibleAlphaEqnSubCycle.H"
 
-            turbulence.correctPhasePhi();
+      turbulence.correctPhasePhi();
 
-            for (int loop = 0; loop < 2; loop++)
-            {
+      for (int loop = 0; loop < 2; loop++) {
 #include "interfaceSmearing.H"
+        if (loop == 0) {
 
-                if (loop == 0)
-                {
 #include "TEqn.H"
-                }
-            }
-
-#include "UEqn.H"
-
-            // --- Pressure corrector loop
-            while (pimple.correct())
-            {
-#include "pEqn.H"
-            }
-
-            if (pimple.turbCorr())
-            {
-                turbulence.correct();
-            }
         }
+      }
+#include "UEqn.H"
+      // --- Pressure corrector loop
+      while (pimple.correct()) {
+#include "pEqn.H"
+      }
 
-        runTime.write();
-
-        Info << "ExecutionTime = "
-             << runTime.elapsedCpuTime()
-             << " s\n\n"
-             << endl;
+      if (pimple.turbCorr()) {
+        turbulence.correct();
+      }
     }
 
-    Info << "End\n"
-         << endl;
+    runTime.write();
 
-    return 0;
+    Info << "ExecutionTime = " << runTime.elapsedCpuTime() << " s\n\n" << endl;
+  }
+
+  Info << "End\n" << endl;
+
+  return 0;
 }
 
 // ************************************************************************* //

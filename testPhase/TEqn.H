@@ -1,6 +1,10 @@
 {
-    fvScalarMatrix TEqn
-    (
+  volScalarField::Internal CeSource = rhoSmear * (alpha1()*alpha1() +
+                                        alpha2() * alpha2());
+  volScalarField::Internal HvSource = rhoDotSharp *(alpha1()/mixture.thermo1().Cv()()+alpha2()/mixture.thermo2().Cv()())* phaseChange.latentHeat(T).ref();
+
+  fvScalarMatrix TEqn
+  (
         fvm::ddt(rho, T) + fvm::div(rhoPhi, T) - fvm::Sp(contErr, T)
       - fvm::laplacian(turbulence.alphaEff(), T)
       + (
@@ -17,17 +21,17 @@
          + alpha2()/mixture.thermo2().Cv()()
         )
      ==
-        fvModels.source(rho, T)
-    );
+      fvm::SuSp(CeSource,T)+HvSource
+  );
 
-    TEqn.relax();
+  TEqn.relax();
 
-    fvConstraints.constrain(TEqn);
+  fvConstraints.constrain(TEqn);
 
-    TEqn.solve();
+  TEqn.solve();
 
-    fvConstraints.constrain(T);
+  fvConstraints.constrain(T);
 
-    mixture.correctThermo();
-    mixture.correct();
+  mixture.correctThermo();
+  mixture.correct();
 }

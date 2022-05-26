@@ -1,6 +1,6 @@
 // Variable Declarations
-Info << "Declaring Variables" << endl;
-tmp<volScalarField::Internal> trhodotSharp = -phaseChange.Salpha(alpha1)[0];
+Reconstruction.correct();
+tmp<volScalarField::Internal> trhodotSharp = -phaseChange.RhoDotSharp(alpha1)[0];
 rhoDotSharp.ref() = trhodotSharp.ref();
 scalar volIntegral = 0.0;
 
@@ -9,12 +9,10 @@ forAll(rhoDotSharp, CellI)
 {
     volIntegral += rhoDotSharp[CellI] * mesh.V()[CellI];
 }
-Info << "volIntegral=" << volIntegral << endl;
 
 /*---------------------------------------------------*\
               Smear Sharp Source Term
     \*---------------------------------------------------*/
-Info << "You've made it this far (1)!" << endl;
 
 // Dummy Initializations, Fix Later
 dimensionedScalar DDT = phaseChange.lookup("DDT");
@@ -45,7 +43,6 @@ forAll(mesh.C(), CellI)
     }
 }
 
-Info << "You've made it this far (2)!" << endl;
 
 /*---------------------------------------------------*\
               Solve For Coefficients
@@ -59,12 +56,18 @@ forAll(mesh.C(), CellI)
     heavyVolL += rightHeavy[CellI] * rhoSmear[CellI] * mesh.V()[CellI];
     heavyVolV += leftHeavy[CellI] * rhoSmear[CellI] * mesh.V()[CellI];
 }
-Info << "You've made it this far (3)!" << endl;
 Info << "heavyVolL=" << heavyVolL << endl;
 Info << "heavyVolV=" << heavyVolV << endl;
-
-dimensionedScalar Nl = volIntegral / heavyVolL;
-dimensionedScalar Nv = volIntegral / heavyVolV;
+dimensionedScalar Nl("Nl", dimless, 0.0);
+dimensionedScalar Nv("Nv", dimless, 0.0);
+if(heavyVolL.value()>1e-99)
+{
+    Nl= volIntegral / heavyVolL;
+}
+if(heavyVolV.value()>1e-99)
+{
+    Nv= volIntegral / heavyVolV;
+}
 
 /*---------------------------------------------------*\
         Calculate Final Source Term Distribution
@@ -75,7 +78,6 @@ forAll(mesh.C(), CellI)
     rhoSmear[CellI] = Nv.value() * leftHeavy[CellI] * rhoSmear[CellI] - Nl.value() * rightHeavy[CellI] * rhoSmear[CellI];
 }
 
-rhoSmear.write();
 scalar continuityTest = 0;
 scalar continuityTest2 = 0;
 // Validate Continuity

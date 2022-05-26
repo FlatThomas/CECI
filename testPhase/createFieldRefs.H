@@ -1,7 +1,7 @@
 twoPhaseChangeModel& phaseChange = phaseChangePtr();
-
+rhoDotSharp.ref()=-phaseChange.RhoDotSharp(alpha1)[0].ref();
 volScalarField& alpha2(mixture.alpha2());
-
+            
 const volScalarField& rho1 = mixture.thermo1().rho();
 const volScalarField& rho2 = mixture.thermo2().rho();
 
