@@ -110,21 +110,17 @@
         p_rghEqnComp1.ref().relax();
         p_rghEqnComp2.ref().relax();
     }
-Info<<"1"<<endl;
     // Cache p_rgh prior to solve for density update
     volScalarField p_rgh_0(p_rgh);
     
-Info<<"2"<<endl;
     // Cache p_rgh prior to solve for density update
     while (pimple.correctNonOrthogonal())
     {
-Info<<"3"<<endl;
         fvScalarMatrix p_rghEqnIncomp
         (
             fvc::div(phiHbyA) - fvm::laplacian(rAUf, p_rgh)
          == Sp_rgh
         );
-Info<<"4"<<endl;
         solve
         (
             p_rghEqnComp1() + p_rghEqnComp2() + p_rghEqnIncomp
@@ -153,7 +149,6 @@ Info<<"4"<<endl;
 
     // Correct Uf if the mesh is moving
     fvc::correctUf(Uf, U, fvc::absolute(phi, U));
-Info<<"Hello Test"<<endl;
     // Update densities from change in p_rgh
     mixture.thermo1().correctRho(psi1*(p_rgh - p_rgh_0));
     mixture.thermo2().correctRho(psi2*(p_rgh - p_rgh_0));

@@ -131,8 +131,8 @@ boundaryField
     backOutlet
     {
         type            inletOutlet;
-        inletValue      uniform 0;
-        value           uniform 0;
+        inletValue      uniform 1;
+        value           uniform 1;
     }
     defaultFaces
     {

@@ -22,7 +22,6 @@ Pair<tmp<volScalarField::Internal>> phaseChangeS
 (
     phaseChange.Salpha(alpha1)
 );
-Info<<"DONE"<<endl;
 if (phaseChangeS[0].valid())
 {
     Su = phaseChangeS[0];

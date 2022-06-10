@@ -1,7 +1,8 @@
-// Variable Declarations
+//Correct Phasechange properties
 Reconstruction.correct();
-tmp<volScalarField::Internal> trhodotSharp = -phaseChange.RhoDotSharp(alpha1)[0];
-rhoDotSharp.ref() = trhodotSharp.ref();
+rhoDotSharp.ref()=phaseChange.RhoDotSharp(alpha1)[0];
+
+//Initialize Volume Integral
 scalar volIntegral = 0.0;
 
 // Loop Over Cells to get Value
@@ -18,7 +19,7 @@ forAll(rhoDotSharp, CellI)
 dimensionedScalar DDT = phaseChange.lookup("DDT");
 
 // Initialize smeared field, copied from sharp field
-// rhoSmear.ref()=rhoDotSharp;
+ rhoSmear=rhoDotSharp;
 // Create PDE
 Foam::fvScalarMatrix smearEqn(
     fvm::Sp(scalar(1), rhoSmear) - fvm::laplacian(DDT, rhoSmear) == rhoDotSharp
@@ -89,4 +90,4 @@ forAll(rhoSmear, CellI)
 
 Info << "Continuity Value: " << continuityTest << endl;
 Info << "Sharp Continuity: " << volIntegral << endl;
-Info << "Continuity2 Value: " << continuityTest2 << endl;
+Info << "Continuity2 Value: " << continuityTest2 << endl<<endl;

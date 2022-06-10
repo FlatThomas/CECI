@@ -119,13 +119,13 @@ main(int argc, char* argv[])
 
           MRF.update();
           if (correctPhi) {
-#include "correctPhi.H"
+              #include "correctPhi.H"
           }
 
           mixture.correct();
 
           if (checkMeshCourantNo) {
-#include "meshCourantNo.H"
+              #include "meshCourantNo.H"
           }
         }
 
@@ -133,22 +133,19 @@ main(int argc, char* argv[])
       }
 
       fvModels.correct();
-#include "alphaControls.H"
-#include "compressibleAlphaEqnSubCycle.H"
+      Reconstruction.correct();
+      #include "alphaControls.H"
+      #include "compressibleAlphaEqnSubCycle.H"
 
       turbulence.correctPhasePhi();
 
-      for (int loop = 0; loop < 2; loop++) {
-#include "interfaceSmearing.H"
-        if (loop == 0) {
+      #include "interfaceSmearing.H"
+      #include "TEqn.H"
 
-#include "TEqn.H"
-        }
-      }
-#include "UEqn.H"
+      #include "UEqn.H"
       // --- Pressure corrector loop
       while (pimple.correct()) {
-#include "pEqn.H"
+          #include "pEqn.H"
       }
 
       if (pimple.turbCorr()) {

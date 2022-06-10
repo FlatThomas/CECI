@@ -116,7 +116,7 @@ public:
   // Calculate Liquid Gradient
   Foam::tmp<Foam::volScalarField::Internal> Gradient(
     const volScalarField::Internal& dint,
-    const scalar& a) const;
+    bool isLiquid) const;
 
   tmp<volScalarField::Internal> Tsat(const volScalarField::Internal& P) const;
 

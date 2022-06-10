@@ -29,7 +29,9 @@ internalField   nonuniform List<scalar>
 0
 0
 0
-0.500021
+0.480777
+0.999903
+0.999998
 1
 1
 1
@@ -117,8 +119,6 @@ internalField   nonuniform List<scalar>
 1
 1
 1
-1
-0.999973
 )
 ;
 
@@ -131,8 +131,8 @@ boundaryField
     backOutlet
     {
         type            inletOutlet;
-        inletValue      uniform 0;
-        value           uniform 0;
+        inletValue      uniform 1;
+        value           uniform 1;
     }
     defaultFaces
     {

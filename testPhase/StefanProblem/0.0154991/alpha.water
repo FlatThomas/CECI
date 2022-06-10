@@ -19,17 +19,28 @@ dimensions      [0 0 0 0 0 0 0];
 internalField   nonuniform List<scalar> 
 100
 (
-6.06751e-23
-1.22506e-22
-6.31833e-20
-7.56726e-18
-1.7493e-15
-3.00506e-13
-4.15982e-11
-4.83725e-09
-2.32523e-07
-0.000780263
-0.499303
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0
+0.436812
+0.972921
+0.991377
+0.997267
+0.999137
+0.999728
+0.999915
+0.999973
+0.999992
+0.999997
+0.999999
 1
 1
 1
@@ -108,17 +119,6 @@ internalField   nonuniform List<scalar>
 1
 1
 1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-0.999827
 )
 ;
 
@@ -131,8 +131,8 @@ boundaryField
     backOutlet
     {
         type            inletOutlet;
-        inletValue      uniform 0;
-        value           uniform 0;
+        inletValue      uniform 1;
+        value           uniform 1;
     }
     defaultFaces
     {

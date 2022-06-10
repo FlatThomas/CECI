@@ -23,14 +23,14 @@ boundaryField
 	frontHeated
     {
     	  type            fixedFluxPressure;
-          value           $internalField;
+          value           uniform 0;
     
     }
     
     backOutlet
     {
     	type		prghTotalPressure;
-    	p0		$internalField;
+    	p0		uniform 0;
     	rho		thermo:rho;
     }
      

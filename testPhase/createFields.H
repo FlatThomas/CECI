@@ -18,10 +18,8 @@ volVectorField U(IOobject("U",
 
 #include "createPhi.H"
 
-Info << "Constructing compressibleTwoPhaseMixture\n" << endl;
 compressibleTwoPhaseMixture mixture(U, phi);
 
-Info << "Constructing Interface Reconstruction Class\n" << endl;
 interfaceReconstruct Reconstruction(mixture);
 
 autoPtr<twoPhaseChangeModel> phaseChangePtr(
@@ -66,8 +64,7 @@ volScalarField rhoSmear(IOobject("rhoSmear",
                                  IOobject::AUTO_WRITE),
                         mesh);
 
-volScalarField
-dgdt(alpha1* fvc::div(phi));
+volScalarField dgdt(alpha1* fvc::div(phi));
 
 #include "createAlphaFluxes.H"
 

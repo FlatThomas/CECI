@@ -111,7 +111,7 @@ Foam::twoPhaseChangeModels::tempGrad::Tsat(
 Foam::tmp<Foam::volScalarField::Internal>
 Foam::twoPhaseChangeModels::tempGrad::Gradient(
   const Foam::volScalarField::Internal& dint,
-  const scalar& a) const
+  bool isLiquid) const
 {
   // Standard Tmp Initialization
   Foam::tmp<Foam::volScalarField::Internal> tmpGrad(
@@ -125,7 +125,6 @@ Foam::twoPhaseChangeModels::tempGrad::Gradient(
       dimensionedScalar("liqGrad", dimensionSet(0, -3, 0, 1, 0, 0, 0), 0)));
   volScalarField::Internal& Grad = tmpGrad.ref();
 
-
   // Get References
   const fvMesh& mesh = alpha1().mesh();
   const labelListList& cellCells = mesh.cellCells();
@@ -133,21 +132,25 @@ Foam::twoPhaseChangeModels::tempGrad::Gradient(
   tmp<volScalarField> tatInterface = mixture_.nearInterface();
   const volScalarField& atInterface = tatInterface.ref();
 
-  tmp<volVectorField> talphaN = mixture_.n();
-  const volVectorField::Internal& alphaN = talphaN.ref();
+  //tmp<volVectorField::Internal> talphaN = _Reconstruct.intNormal();
+  //const volVectorField::Internal& alphaN = talphaN.ref();
+  const volVectorField::Internal& alphaN = _Reconstruct.intNormal();
 
   tmp<volScalarField::Internal> tsatTemp = Tsat(p());
   const volScalarField::Internal& satTemp = tsatTemp.ref();
 
   // Other Variable Declarations
   labelList counter(mesh.C().size(), 0);
-  labelList interfaceCells;
-  labelList dataCells;
+  labelList interfaceCells(0);
+  scalar cutOff=1;
+  if(isLiquid) cutOff=.999;
+  else cutOff=.001;
 
 
   forAll(mesh.C(), cellI)
   {
-    if (dint[cellI] > 1e-4 && alpha1()[cellI] == a) {
+
+    if (dint[cellI] > 1e-4 && (isLiquid? alpha1()[cellI]>cutOff : alpha1()[cellI]<cutOff)) {
       labelList nearbyIntCells;
       // Cell is Straddling Interface, Find neighbouring interface cells
       forAll(cellCells[cellI], cellJ)
@@ -171,17 +174,16 @@ Foam::twoPhaseChangeModels::tempGrad::Gradient(
         Info << "gradient at cell " << nearbyIntCells[cellJ] << " is " <<
         Grad[nearbyIntCells[cellJ]] << endl; Info << "count at a value of " <<
         counter[nearbyIntCells[cellJ]] << endl; Info << "dint value of " <<
-        dint[cellI] << endl; Info << endl;
+        dint[cellI] << endl; Info << endl<<endl; 
       }
     }
     // Flag Interface Cells for faster looping down the line
-    if (atInterface[cellI] == 1) {
+    if (atInterface[cellI]==1) {
       interfaceCells.append(cellI);
     }
   }
 
   // Reduce Memory
-  talphaN.clear();
   tsatTemp.clear();
 
   forAll(interfaceCells, cellI)
@@ -195,7 +197,8 @@ Foam::twoPhaseChangeModels::tempGrad::Gradient(
     forAll(cellNeighbours, cellJ)
     {
       // Break Loop if cell has a liquid neighbour and flip switch
-      if (alpha1()[cellNeighbours[cellJ]] == a) {
+      if(isLiquid? alpha1()[cellNeighbours[cellJ]]>cutOff : alpha1()[cellNeighbours[cellJ]]<cutOff){
+      //if (alpha1()[cellNeighbours[cellJ]]<lower || alpha1()[cellNeighbours[cellJ]]>upper) {
         // Info << "Cell " << cellNeighbours[cellJ] << " flipped breaker! " <<
         // endl;
         breaker = true;
@@ -207,8 +210,8 @@ Foam::twoPhaseChangeModels::tempGrad::Gradient(
       forAll(cellNeighbours, cellJ)
       {
         if (atInterface[cellNeighbours[cellJ]] == 1) {
-          Grad[currentCell] += Grad[nearbyCells[cellJ]];
-          counter[cellNeighbours[cellJ]]++;
+          Grad[currentCell] += Grad[cellNeighbours[cellJ]];
+          counter[currentCell]++;
         }
       }
     }
@@ -234,14 +237,15 @@ Foam::twoPhaseChangeModels::tempGrad::RhoDotSharp(
 {
 
   const fvMesh& mesh = alpha.mesh();
-  const tmp<volVectorField> intNormal = mixture_.n();
-  const tmp<volScalarField::Internal> lam = _Reconstruct.lambda();
-  const volScalarField::Internal dint =
-    mag((mesh.C() & intNormal.ref()).ref() - lam.ref());
-  lam.clear();
-  intNormal.clear();
+  /*const tmp<volScalarField::Internal> lam = _Reconstruct.lambda();
+  tmp<volVectorField::Internal> tintNormal=_Reconstruct.intNormal();
+  const volVectorField::Internal& intNormal=tintNormal.ref();
+ */ 
 
-  Info << "Initializing temp sharp rho field" << endl;
+  const volScalarField::Internal dint =
+    mag((mesh.C() & _Reconstruct.intNormal()) - _Reconstruct.lambda());
+  
+  
   // Standard Tmp INitialization
   tmp<volScalarField::Internal> trhoS(new volScalarField::Internal(
     IOobject("rhoS",
@@ -254,21 +258,23 @@ Foam::twoPhaseChangeModels::tempGrad::RhoDotSharp(
     dimensionedScalar("rhoS", dimMass / dimTime, 0)));
 
   volScalarField::Internal& rhoS = trhoS.ref();
-  Info << "DONE" << endl;
 
   // Rando Refs
-  tmp<volVectorField::Internal> tintArea = _Reconstruct.Sp();
-  const volVectorField::Internal& intArea = tintArea.ref();
-
+  const volVectorField::Internal& intArea = _Reconstruct.Sp();
+  forAll(intArea, CellI)
+  {
+    if(mag(intArea[CellI])>0.0){
+      Info<<"Cell "<<CellI<<" intArea "<<intArea[CellI]<<endl;
+    }
+  }
+ 
   // Grab Thermal Conductivity Refs
   const volScalarField& kL = mixture_.thermo1().kappa();
   const volScalarField& kV = mixture_.thermo2().kappa();
 
   // Calc Temp Grad at interface due to liquid and vapor
-  Info << "calculating liquid gradient " << endl;
   tmp<volScalarField::Internal> tlgrad = Gradient(dint, 1);
   volScalarField::Internal lgrad = tlgrad.ref();
-  Info << "calculating vapor gradient " << endl;
   tmp<volScalarField::Internal> tvgrad = Gradient(dint, 0);
   volScalarField::Internal vgrad = tvgrad.ref();
 
@@ -282,7 +288,7 @@ Foam::twoPhaseChangeModels::tempGrad::RhoDotSharp(
       Info << "Liquid Heat Xfer " << -kL[cellI] * lgrad[cellI] << endl;
       Info << "Vapor Heat Xfer " << kV[cellI] * vgrad[cellI] << endl;
       Info << "Calculated mass transfer " << rhoS[cellI] << endl;
-      Info << endl;
+      Info << endl<<endl;
     }
   }
 

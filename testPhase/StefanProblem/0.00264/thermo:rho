@@ -19,17 +19,19 @@ dimensions      [1 -3 0 0 0 0 0];
 internalField   nonuniform List<scalar> 
 100
 (
-0.57254
-0.572572
-0.572573
-0.572574
-0.572575
-0.572576
-0.572566
-0.57248
-0.571652
-0.56204
-485.079
+0.569395
+0.569428
+0.569427
+0.569425
+0.569425
+0.569424
+0.569414
+0.569329
+0.568515
+0.558673
+466.43
+969.46
+969.551
 969.553
 969.553
 969.553
@@ -117,8 +119,6 @@ internalField   nonuniform List<scalar>
 969.553
 969.553
 969.553
-969.553
-969.527
 )
 ;
 
@@ -127,12 +127,12 @@ boundaryField
     frontHeated
     {
         type            calculated;
-        value           uniform 0.561934;
+        value           uniform 0.558517;
     }
     backOutlet
     {
         type            calculated;
-        value           uniform 0.562093;
+        value           uniform 969.553;
     }
     defaultFaces
     {

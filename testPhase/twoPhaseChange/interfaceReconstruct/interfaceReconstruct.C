@@ -54,18 +54,18 @@ Foam::interfaceReconstruct::createEdgeIndexing()
 void
 Foam::interfaceReconstruct::createFaceList()
 {
-  Info << "Creating Interface Faces List" << endl;
   // Variable Declarations
   const labelUList& own = mesh_.owner();
   const labelUList& nei = mesh_.neighbour();
 
-  const volScalarField::Internal& interface(mixture_.nearInterface().ref());
+  const volScalarField::Internal& interface=mixture_.nearInterface().ref();
+  faceMap_.clear();
 
   forAll(own, faceI)
   {
     // Find owner neighbour pairs both at interface
     if (interface[own[faceI]] == 1 && interface[nei[faceI]] == 1) {
-      faceMap_.insert(faceI, 0);
+      faceMap_.set(faceI, 0);
     }
   }
 
@@ -77,8 +77,8 @@ Foam::interfaceReconstruct::createFaceList()
     forAll(patch, faceI)
     {
       if (interface[pFaceCells[faceI]] == 1) {
-        faceMap_.insert(patch.start() + faceI, 0);
-      }
+        faceMap_.set(patch.start() + faceI, 0);
+         }
     }
   }
 
@@ -91,7 +91,6 @@ Foam::interfaceReconstruct::createFaceList()
 void
 Foam::interfaceReconstruct::findBoundaryEdges()
 {
-  Info << "finding boundary edges" << endl;
 
   boundaryEdges_.resize(mesh_.edges().size());
 
@@ -111,7 +110,6 @@ Foam::interfaceReconstruct::findBoundaryEdges()
 void
 Foam::interfaceReconstruct::generateEdgeFaceList()
 {
-  Info << "Generating EdgeFaceList" << endl;
   const edgeList& Edges = mesh_.edges();
   const faceList& Faces = mesh_.faces();
   edgeFaces_.setSize(Edges.size());
@@ -145,40 +143,35 @@ Foam::interfaceReconstruct::generateEdgeFaceList()
 void
 Foam::interfaceReconstruct::DFS(label i)
 {
-  // Info<<"starting DFS loop"<<endl;
   // Mark Current Face as visited
   faceMap_.set(i, 1);
   const edgeList& fEdges = mesh_.faces()[i].edges();
-
   // Loop Over Edges in Face
   for (label edgeI = 0; edgeI < fEdges.size(); edgeI++) {
 
     // Check if Edge is on List
 
     if (edgeMapb_.found(fEdges[edgeI]) == false) {
-      // Info<<"Edge not found, entering inner loop"<<endl;
 
       // Add to list
       const edge& E1 = fEdges[edgeI];
       edgeMapb_.insert(E1, 1);
 
-      if ((sign(alpha1P_[E1[0]] - .5) + sign(alpha1P_[E1[1]] - .5)) ==
-          0) // Check if Face has .5 somewherebetween verts
+      if ((sign(alpha1P_[E1[0]] - .5) + sign(alpha1P_[E1[1]] - .5)) == 0 ||
+            mag(alpha1P_[E1[0]]-.5)<1e-4 || mag(alpha1P_[E1[1]]-.5)<1e-4) // Check if Face has .5 somewherebetween verts
       {
-        // Info<<"Edge meets criteria, calculated interface point"<<endl;
         // Designations to help clean up code
         const vector& x1 = mesh_.points()[E1[0]];
         const vector& x2 = mesh_.points()[E1[1]];
         const scalar& a1 = alpha1P_[E1[0]];
         const scalar& a2 = alpha1P_[E1[1]];
-
-        // Calculate Interpolated Value
+                // Calculate Interpolated Value
         vector linInterp = x1 + (x2 - x1) * ((.5 - a1) / (a2 - a1));
 
-        // Info<<"Linear Interpolation Value found at point "<<linInterp[0]<<"
-        // "<<linInterp[1]<<endl; Store in hash table
+         //Info<<"Linear Interpolation Value found at point "<<linInterp<<endl;
         edgeMap_.insert(E1, linInterp);
       }
+      
 
       // Jump to an unvisited Face
       // Info<<"finding edge index"<<endl;
@@ -208,6 +201,47 @@ Foam::interfaceReconstruct::interfaceReconstruct(
   , vpi_(mesh_)
   , faceMap_(mesh_.faces().size())
   , alpha1P_(vpi_.interpolate(mixture_.alpha1()))
+  , Sp_
+  (
+      IOobject
+      (
+          "Sp",
+          mixture_.alpha1().time().timeName(),
+          mixture.alpha1().mesh(),
+          IOobject::NO_READ,
+          IOobject::AUTO_WRITE
+      ),
+      mixture.alpha1().mesh(),
+      dimensionedVector(dimArea, vector::zero)
+  ),
+
+  lambda_
+  (
+      IOobject
+      (
+          "lambda",
+          mixture_.alpha1().time().timeName(),
+          mixture.alpha1().mesh(),
+          IOobject::NO_READ,
+          IOobject::AUTO_WRITE
+      ),
+      mixture.alpha1().mesh(),
+      dimensionedScalar(dimLength, 0)
+  ),
+
+  intNormal_
+  (
+      IOobject
+      (
+          "intNormal",
+          mixture_.alpha1().time().timeName(),
+          mixture.alpha1().mesh(),
+          IOobject::NO_READ,
+          IOobject::AUTO_WRITE
+      ),
+      mixture.alpha1().mesh(),
+      dimensionedVector(dimless, vector::zero)
+  )
 
 {
   // calculateAlphaP();
@@ -216,6 +250,9 @@ Foam::interfaceReconstruct::interfaceReconstruct(
   findBoundaryEdges();
   generateEdgeFaceList();
   DFS(faceMap_.begin().key());
+  calculateSp();
+  calculateintNormal();
+  calculatelambda();
 }
 
 // * * * * * * * * * * * * * * Member Functions  * * * * * * * * * * * * * * //
@@ -229,15 +266,15 @@ Foam::interfaceReconstruct::pass(DimensionedField<Type, Mesh>& intField,
   const labelListList& cellCells = mesh_.cellCells();
   const volScalarField& atInterface = mixture_.nearInterface().ref();
 
-  labelList intCells;
-  labelList queueCells;
+  labelList intCells(0);
+  labelList queueCells(0);
   labelList counter(mesh_.C().size(), 0);
   labelList visited(mesh_.C().size(), 0);
 
   // Prelim Search
   forAll(mesh_.C(), cellI)
   {
-    if (atInterface[cellI] == 1) // Maybe a better way to do this
+    if (mag(intField[cellI]) > 1e-6) // Maybe a better way to do this
     {
       intCells.append(cellI);
       visited[cellI] = 1;
@@ -293,23 +330,19 @@ Foam::interfaceReconstruct::pass(DimensionedField<Type, Mesh>& intField,
 
     queueCells.clear();
   }
+
+  
 }
 
-tmp<volVectorField::Internal>
-Foam::interfaceReconstruct::Sp() const
+void Foam::interfaceReconstruct::calculateSp() 
 {
   // Standard Tmp Initialization
-  Info << "Entering SP" << endl;
-  tmp<volVectorField::Internal> tSp(volVectorField::Internal::New(
-    "SpInt",
-    mesh_,
-    dimensionedVector(dimensionSet(0, 2, 0, 0, 0, 0, 0), vector::zero)));
-  volVectorField::Internal& Sp = tSp.ref();
-
+  
   const labelUList& own = mesh_.owner();
   const labelUList& nei = mesh_.neighbour();
   const volVectorField& alphaNormal = mixture_.n().ref();
   const faceList& Faces = mesh_.faces();
+  Sp_=zeroField();
 
   // Loop through all Elements in faceMap
   forAllConstIter(Map<bool>, faceMap_, iter)
@@ -321,10 +354,15 @@ Foam::interfaceReconstruct::Sp() const
     forAll(Faces[F].edges(), edgeI)
     {
       if (edgeMap_.found(Faces[F].edges()[edgeI]) == true) {
+
         V.append(edgeMap_[Faces[F].edges()[edgeI]]);
       }
     }
 
+    if(V.empty())
+      {
+        continue;
+      }
     vector xproduct = 0.5 * (V[0] ^ V[1]);
 
     if (F < own.size()) {
@@ -333,8 +371,8 @@ Foam::interfaceReconstruct::Sp() const
         xproduct = .5 * (V[1] ^ V[0]);
       }
 
-      Sp[own[F]] += xproduct;
-      Sp[nei[F]] -= xproduct;
+      Sp_[own[F]] += xproduct;
+      Sp_[nei[F]] -= xproduct;
     }
 
     else {
@@ -353,34 +391,27 @@ Foam::interfaceReconstruct::Sp() const
               0) {
             xproduct = .5 * (V[1] ^ V[0]);
           }
-          Sp[pFaceCells[F - mesh_.boundaryMesh()[patchI].start()]] += xproduct;
+          Sp_[pFaceCells[F - mesh_.boundaryMesh()[patchI].start()]] += xproduct;
         }
       }
     }
   }
 
-  pass(Sp, 1);
-  Info << "exited Pass successfully returning Sp" << endl;
+  pass(Sp_, 1);
 
-  return tSp;
 }
 
-tmp<volScalarField::Internal>
-Foam::interfaceReconstruct::lambda() const
+
+void Foam::interfaceReconstruct::calculatelambda() 
 {
   // Standard Tmp initialization
-  Info << "Entering Lambda function" << endl;
-  tmp<volScalarField::Internal> tLambda(volScalarField::Internal::New(
-    "lambda", mesh_, dimensionedScalar(dimensionSet(0, 1, 0, 0, 0, 0, 0), 0)));
-
-  volScalarField::Internal& lambda = tLambda.ref();
   labelList counter(mesh_.nCells(), 0);
 
   const labelUList& own = mesh_.owner();
   const labelUList& nei = mesh_.neighbour();
-  const volVectorField& alphGrad = mixture_.n().ref();
+  const volVectorField::Internal& alphGrad = intNormal();
+  lambda_=zeroField();
 
-  Info << "entering lambda for loop" << endl;
   for (HashTable<vector, edge, Hash<edge>>::const_iterator iter =
          edgeMap_.cbegin();
        iter != edgeMap_.end();
@@ -394,8 +425,8 @@ Foam::interfaceReconstruct::lambda() const
       label F = eFaces[faceI];
 
       if (eFaces[faceI] < own.size()) {
-        lambda[own[F]] += alphGrad[own[F]] & edgeMap_[iter.key()];
-        lambda[nei[F]] += alphGrad[nei[F]] & edgeMap_[iter.key()];
+        lambda_[own[F]] += alphGrad[own[F]] & edgeMap_[iter.key()];
+        lambda_[nei[F]] += alphGrad[nei[F]] & edgeMap_[iter.key()];
         counter[own[F]]++;
         counter[nei[F]]++;
       }
@@ -411,36 +442,49 @@ Foam::interfaceReconstruct::lambda() const
             label boundaryCellIndex =
               pFaceCells[F - mesh_.boundaryMesh()[patchI].start()];
 
-            lambda[boundaryCellIndex] +=
+            lambda_[boundaryCellIndex] +=
               alphGrad[boundaryCellIndex] & edgeMap_[iter.key()];
             counter[boundaryCellIndex]++;
+            
           }
         }
       }
     }
   }
 
-  Info << "calculating averages " << endl;
   // Loop over Cells and divide by counter value
 
   forAll(mesh_.C(), cellI)
   {
     if (counter[cellI] != 0) {
-      lambda[cellI] /= counter[cellI];
+      lambda_[cellI] /= counter[cellI];
     }
   }
-  Info << " loop exited, clearing counter " << endl;
-  Info << "passing lambda " << endl;
-  pass(lambda, 1);
-  Info << "lambda successfully passed, returning " << endl;
+  pass(lambda_, 1);
 
-  return tLambda;
 }
-void
-Foam::interfaceReconstruct::correct()
+
+ 
+void Foam::interfaceReconstruct::calculateintNormal() 
 {
-  Info << "correcting Alpha vertex interpolation" << endl;
+
+  forAll(intNormal_, cellI)
+  {
+    if(mag(Sp()[cellI])>1e-6)
+    {
+      intNormal_[cellI]=Sp()[cellI]/mag(Sp()[cellI]);
+    }
+  }
+}
+
+void Foam::interfaceReconstruct::correct()
+{
   calculateAlphaP();
-  Info << "Starting Correction Loop" << endl;
+  createFaceList();
+  edgeMap_.clearStorage();
+  edgeMapb_.clearStorage();
   DFS(faceMap_.begin().key());
+  calculateSp();
+  calculateintNormal();
+  calculatelambda();
 }

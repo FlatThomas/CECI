@@ -44,18 +44,20 @@ SourceFiles
     {
         class interfaceReconstruct
         {
-            //friend class twoPhaseChangeModel;
             const compressibleTwoPhaseMixture& mixture_;
             const fvMesh &mesh_;
             pointMesh pMesh_;
             volPointInterpolation vpi_;
+            pointScalarField alpha1P_;
+            volVectorField::Internal Sp_;
+            volScalarField::Internal lambda_;
+            volVectorField::Internal intNormal_;
 
             EdgeMap<label> edgeIndex_;
             Map<bool> faceMap_;
             EdgeMap<bool> boundaryEdges_;
             EdgeMap<vector> edgeMap_;
             EdgeMap<bool> edgeMapb_;
-            pointScalarField alpha1P_;
             labelListList edgeFaces_;
 
            //Private Member Functions
@@ -65,6 +67,10 @@ SourceFiles
            void DFS(label i);
            void findBoundaryEdges();
            void generateEdgeFaceList();
+           void calculateSp();
+           void calculatelambda();
+           void calculateintNormal();
+
 
         public:
        TypeName("interfaceReconstruct");
@@ -89,16 +95,26 @@ SourceFiles
                 return mixture_.alpha2();
             }
 
+        const volVectorField::Internal &Sp() const 
+            {
+                return Sp_;
+            }
+        const volScalarField::Internal &lambda() const 
+            {
+                return lambda_;
+            }
+        const volVectorField::Internal &intNormal() const 
+            {
+                return intNormal_;
+            }
+
         
         //Pass Data from an interface field to n number of cells
         template<typename Type, class Mesh>
         void pass(DimensionedField<Type, Mesh> &intField, label n) const;
 
         //Calculate Interface Area Vector
-        tmp<volVectorField::Internal> Sp() const;
-
-        //Calculate Interface Offset
-        tmp<volScalarField::Internal> lambda() const;
+        void resetFaceMap();
         
         //Update Method
         void correct();
